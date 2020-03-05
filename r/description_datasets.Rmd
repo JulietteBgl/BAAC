@@ -618,11 +618,17 @@ utilisation_equipement_secu <- usag %>%
   (equipement_secu|utilisation_equipement_secu)
 ```
 
+# Lieux
+
+```{r}
+head(lieux)
+```
 
 
 **To do :**  
 
-Focus sur la métropole : à confirmer avec la team
+Focus sur la métropole : à confirmer avec la team  
+Voir combien d'années on prend en compte ?
 
 **Infographie :  **
 --> description des accidents en France  
