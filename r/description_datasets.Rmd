@@ -1,0 +1,638 @@
+---
+title: "Description des datasets"
+output:
+  html_document:
+    df_print: paged
+    toc: true
+    toc_float: true
+    theme: readable
+    highlight: tango
+    #code_folding: show
+    number_sections: true
+---
+
+```{r initial_chunk1, echo = FALSE, warning = FALSE, message = FALSE}
+library("knitr")
+opts_chunk$set(echo = FALSE, eval = TRUE, warning = FALSE, message = FALSE, fig.align = 'center', dpi = 300, out.width = '75%')
+```
+
+```{r test-main, child = 'child_source.Rmd'}
+```
+
+# Caractéristiques 2018
+
+## Construction du jeu de donnée
+
+La table comporte **`r dim(caract)[1]`** observations qui correspondent chacune à des accidents différents, et **`r dim(caract)[2]`** variables.
+
+**Aperçu des données**
+```{r}
+# Apperçu des données
+head(caract) %>%
+   kable() %>%
+    kable_styling(
+      bootstrap_options = c("striped", "hover", "responsive"), font_size = 9 
+    ) %>% 
+  scroll_box(width = "800px", height = "200px")
+```
+
+Chaque accident est décrit par :  
+- sa date / heure,   
+- sa localisation et une description de sa localisation,   
+- la météo au moment de l'accident   
+- ainsi que le type d'accident.
+
+**Résumé statistique**
+```{r}
+# Résumé statistique
+summary(caract) %>% 
+  kable() %>%
+  kable_styling(
+    bootstrap_options = c("striped", "hover", "responsive"), font_size = 9
+    ) %>% 
+  scroll_box(width = "800px", height = "500px")
+```
+
+**Valeurs manquantes**
+```{r}
+# Valeurs manquantes
+vm <- sapply(
+  X = caract,
+  function(x) sum(is.na(x))
+) 
+
+vm <- data.frame(var = names(vm), nb_na = vm)
+
+ggplot(vm, mapping = aes(x = fct_reorder(var, nb_na, .desc = T), y = nb_na)) +
+  geom_bar(stat="identity") +
+  geom_text(aes(label = paste(round(nb_na/nrow(caract)*100,1), "%")), vjust = -0.5, size = 2) +
+  labs(
+    x = "",
+    y = "Nombre de valeurs manquantes"
+  ) +
+  theme(
+    axis.text.x = element_text(angle = 70, hjust = 1)
+  )
+
+```
+
+## Distribution des variables qualitatives
+
+Nous avons de la donnée sur l'année 2018 uniquement dans ce jeu de donnée.
+
+```{r plots_caract}
+
+# Distribution des mois
+month <- caract %>% 
+  mutate(mois = as.factor(mois)) %>% 
+  group_by(mois) %>% 
+  summarise(n = n()) %>% 
+  ggplot(aes(x = mois, y = n)) +
+  geom_bar(stat = "identity") +
+  geom_text(aes(label = paste(round(n/nrow(caract)*100,1), "%")), vjust = -0.5, size = 2) + 
+  labs(
+    title = "Mois",
+    x = "",
+    y = "Nombre d'enregistrements"
+  ) +
+  theme(
+    text = element_text(size = 12),
+    axis.text.x = element_text(angle = 70, hjust = 1)
+    )
+
+# Distribution de la luminositée
+lum <- caract %>% 
+  group_by(lum) %>% 
+  summarise(n = n()) %>% 
+  ggplot(aes(x = fct_reorder(lum, n, .desc = T), y = n)) +
+  geom_bar(stat = "identity") +
+  geom_text(aes(label = paste(round(n/nrow(caract)*100,1), "%")), vjust = -0.5, size = 2) + 
+  labs(
+    title = "Luminosité",
+    x = "",
+    y = "Nombre d'enregistrements"
+  ) +
+  theme(
+    text = element_text(size = 12),
+    axis.text.x = element_text(angle = 70, hjust = 1)
+    )
+
+# Distribution du type d'agglomération
+agglo <- caract %>% 
+  group_by(agg) %>% 
+  summarise(n = n()) %>% 
+  ggplot(aes(x = fct_reorder(agg, n, .desc = T), y = n)) +
+  geom_bar(stat = "identity") +
+  geom_text(aes(label = paste(round(n/nrow(caract)*100,1), "%")), vjust = -0.5, size = 2) + 
+  labs(
+    title = "Type d'agglomération",
+    x = "",
+    y = "Nombre d'enregistrements"
+  ) +
+  theme(
+    text = element_text(size = 12),
+    axis.text.x = element_text(angle = 70, hjust = 1))
+
+# Distribution du type d'intersection
+int <- caract %>% 
+  group_by(int) %>% 
+  summarise(n = n()) %>% 
+  ggplot(aes(x = fct_reorder(int, n, .desc = T), y = n)) +
+  geom_bar(stat = "identity") +
+  geom_text(aes(label = paste(round(n/nrow(caract)*100,1), "%")), vjust = -0.5, size = 2) + 
+  labs(
+    title = "Type d'intersection",
+    x = "",
+    y = "Nombre d'enregistrements"
+  ) +
+  theme(
+    text = element_text(size = 12),
+    axis.text.x = element_text(angle = 70, hjust = 1))
+
+# Distribution de la météo
+meteo <- caract %>% 
+  group_by(atm) %>% 
+  summarise(n = n()) %>% 
+  ggplot(aes(x = fct_reorder(atm, n, .desc = T), y = n)) +
+  geom_bar(stat = "identity") +
+  geom_text(aes(label = paste(round(n/nrow(caract)*100,1), "%")), vjust = -0.5, size = 2) + 
+  labs(
+    title = "Météo",
+    x = "",
+    y = "Nombre d'enregistrements"
+  ) +
+  theme(
+    text = element_text(size = 12),
+    axis.text.x = element_text(angle = 70, hjust = 1))
+
+# Distribution du type de collision
+col <- caract %>% 
+  group_by(col) %>% 
+  summarise(n = n()) %>% 
+  ggplot(aes(x = fct_reorder(col, n, .desc = T), y = n)) +
+  geom_bar(stat = "identity") +
+  geom_text(aes(label = paste(round(n/nrow(caract)*100,1), "%")), vjust = -0.5, size = 2) + 
+  labs(
+    title = "Type de collision",
+    x = "",
+    y = "Nombre d'enregistrements"
+  ) +
+  theme(
+    text = element_text(size = 12),
+    axis.text.x = element_text(angle = 70, hjust = 1))
+
+# Distribution gps
+gps <- caract %>% 
+  group_by(gps) %>% 
+  summarise(n = n()) %>% 
+  ggplot(aes(x = gps, y = n)) +
+  geom_bar(stat = "identity") +
+  geom_text(aes(label = paste(round(n/nrow(caract)*100,1), "%")), vjust = -0.5, size = 2) + 
+  labs(
+    title = "GPS",
+    x = "",
+    y = "Nombre d'enregistrements"
+  ) +
+  theme(
+    text = element_text(size = 12),
+    axis.text.x = element_text(angle = 70, hjust = 1))
+
+# Distribution par département
+
+dep <- caract %>% 
+  group_by(dep) %>% 
+  summarise(n = n()) %>% 
+  ggplot(aes(x = fct_reorder(dep, n, .desc = T), y = n)) +
+  geom_bar(stat = "identity") +
+  geom_text(aes(label = paste(round(n/nrow(caract)*100,1), "%")), vjust = -0.5, size = 2) + 
+  labs(
+    title = "Départements",
+    x = "",
+    y = "Nombre d'enregistrements"
+  ) +
+  theme(
+    text = element_text(size = 9),
+    axis.text.x = element_text(angle = 70, hjust = 1))
+```
+
+
+```{r final_plot_caract, width = '100%', fig.width = 10, fig.height = 20}
+(month|lum) /
+  (agglo|int) /
+  (meteo|col) /
+  dep
+```
+
+# Véhicules
+
+## Construction du jeu de donnée
+
+La table comporte **`r dim(vehic)[1]`** observations qui correspondent chacune à des véhicules différents, et **`r dim(vehic)[2]`** variables.
+
+**Aperçu des données**
+```{r}
+# Apperçu des données
+head(vehic) %>% 
+   kable() %>%
+   kable_styling(
+     bootstrap_options = c("striped", "hover", "responsive"), font_size = 9
+   ) %>% 
+  scroll_box(width = "800px", height = "200px")
+```
+
+**Résumé statistique**
+```{r}
+# Résumé statistique
+summary(vehic) %>% 
+  kable() %>%
+  kable_styling(
+     bootstrap_options = c("striped", "hover", "responsive"), font_size = 9
+   ) %>% 
+  scroll_box(width = "800px", height = "500px")
+```
+
+**Valeurs manquantes**
+```{r}
+# Valeurs manquantes
+vm <- sapply(
+  X = vehic,
+  function(x) sum(is.na(x))
+) 
+
+vm <- data.frame(var = names(vm), nb_na = vm)
+
+ggplot(vm, mapping = aes(x = fct_reorder(var, nb_na, .desc = T), y = nb_na)) +
+  geom_bar(stat="identity") +
+  geom_text(aes(label = paste(round(nb_na/nrow(vehic)*100,1), "%")), vjust = -0.5, size = 2) +
+  labs(
+    x = "",
+    y = "Nombre de valeurs manquantes"
+  ) +
+  theme(
+    axis.text.x = element_text(angle = 70, hjust = 1),
+    text = element_text(size = 12)
+  )
+```
+
+## Distribution des variables qualitatives
+
+```{r plots_vehicles}
+# Sens de circulation
+sens <- vehic %>% 
+  group_by(senc) %>% 
+  summarise(n = n()) %>% 
+  ggplot(aes(x = fct_reorder(senc, n, .desc = T), y = n)) +
+  geom_bar(stat = "identity") +
+  geom_text(aes(label = paste(round(n/nrow(vehic)*100,1), "%")), vjust = -0.5, size = 2) + 
+  labs(
+    title = "Sens de circulation",
+    x = "",
+    y = "Nombre d'enregistrements"
+  ) +
+  theme(
+    text = element_text(size = 12),
+    axis.text.x = element_text(angle = 70, hjust = 1))
+
+# Catégorie de véhicule -- Distribution catv
+catv <- vehic %>% 
+  group_by(catv) %>% 
+  summarise(n = n()) %>% 
+  ggplot(aes(x = fct_reorder(catv, n, .desc = T), y = n)) +
+  geom_bar(stat = "identity") +
+  geom_text(aes(label = paste(round(n/nrow(vehic)*100,1), "%")), vjust = -0.5, size = 2) + 
+  labs(
+    title = "Catégorie du véhicule",
+    x = "",
+    y = "Nombre d'enregistrements"
+  ) +
+  theme(
+    text = element_text(size = 12),
+    axis.text.x = element_text(angle = 70, hjust = 1))
+
+# Distribution obstacle heurté
+obs <- vehic %>% 
+  group_by(obs) %>% 
+  summarise(n = n()) %>% 
+  ggplot(aes(x = fct_reorder(obs, n, .desc = T), y = n)) +
+  geom_bar(stat = "identity") +
+  geom_text(aes(label = paste(round(n/nrow(vehic)*100,1), "%")), vjust = -0.5, size = 2) + 
+  labs(
+    title = "Obstacle heurté",
+    x = "",
+    y = "Nombre d'enregistrements"
+  ) +
+  theme(
+    text = element_text(size = 12),
+    axis.text.x = element_text(angle = 70, hjust = 1))
+
+# Même graphique après suppression des NA
+obs_na <- vehic %>% 
+  filter(!is.na(obs)) %>% 
+  group_by(obs) %>% 
+  summarise(n = n()) %>% 
+  ggplot(aes(x = fct_reorder(obs, n, .desc = T), y = n)) +
+  geom_bar(stat = "identity") +
+  geom_text(aes(label = paste(round(n/nrow(vehic)*100,1), "%")), vjust = -0.5, size = 2) + 
+  labs(
+    title = "Obstacle heurté",
+    subtitle = "Suppression des valeurs manquantes",
+    x = "",
+    y = "Nombre d'enregistrements"
+  ) +
+  theme(
+    text = element_text(size = 12),
+    axis.text.x = element_text(angle = 70, hjust = 1))
+
+# Obstacle mobile heurté
+obsm <- vehic %>% 
+  group_by(obsm) %>% 
+  summarise(n = n()) %>% 
+  ggplot(aes(x = fct_reorder(obsm, n, .desc = T), y = n)) +
+  geom_bar(stat = "identity") +
+  geom_text(aes(label = paste(round(n/nrow(vehic)*100,1), "%")), vjust = -0.5, size = 2) + 
+  labs(
+    title = "Obstacle mobile heurté",
+    x = "",
+    y = "Nombre d'enregistrements"
+  ) +
+  theme(
+    text = element_text(size = 12),
+    axis.text.x = element_text(angle = 70, hjust = 1))
+
+# Point de choc initial
+choc <- vehic %>% 
+  group_by(choc) %>% 
+  summarise(n = n()) %>% 
+  ggplot(aes(x = fct_reorder(choc, n, .desc = T), y = n)) +
+  geom_bar(stat = "identity") +
+  geom_text(aes(label = paste(round(n/nrow(vehic)*100,1), "%")), vjust = -0.5, size = 2) + 
+  labs(
+    title = "Point de choc initial",
+    x = "",
+    y = "Nombre d'enregistrements"
+  ) +
+  theme(
+    text = element_text(size = 12),
+    axis.text.x = element_text(angle = 70, hjust = 1))
+
+# Manœuvre principale avant l’accident
+manv <- vehic %>% 
+  group_by(manv) %>% 
+  summarise(n = n()) %>% 
+  ggplot(aes(x = fct_reorder(manv, n, .desc = T), y = n)) +
+  geom_bar(stat = "identity") +
+  geom_text(aes(label = paste(round(n/nrow(vehic)*100,1), "%")), vjust = -0.5, size = 2) + 
+  labs(
+    title = "Manœuvre principale avant l’accident",
+    x = "",
+    y = "Nombre d'enregistrements"
+  ) +
+  theme(
+    text = element_text(size = 12),
+    axis.text.x = element_text(angle = 70, hjust = 1))
+
+## to do : occutc
+```
+
+
+```{r final_plot_vehic, width = '100%', fig.width = 10, fig.height = 30}
+(sens|catv) /
+  (obs|obs_na) /
+  (obsm|choc) /
+  manv
+```
+
+# Usagers
+
+## Construction du jeu de donnée
+
+La table comporte **`r dim(usag)[1]`** observations qui correspondent chacune à des usagers différents, et **`r dim(usag)[2]`** variables.
+
+**Apperçu des données**
+```{r}
+# Apperçu des données
+head(usag) %>% 
+   kable() %>%
+  kable_styling(
+     bootstrap_options = c("striped", "hover", "responsive"), font_size = 9
+   ) %>% 
+  scroll_box(width = "800px", height = "200px")
+```
+
+**Résumé statistique**
+```{r}
+# Résumé statistique
+summary(usag) %>% 
+  kable() %>%
+  kable_styling(
+    bootstrap_options = c("striped", "hover","responsive"), font_size = 9 
+    ) %>% 
+  scroll_box(width = "800px", height = "500px")
+```
+
+**Valeurs manquantes**
+```{r}
+# Valeurs manquantes
+vm <- sapply(
+  X = usag,
+  function(x) sum(is.na(x))
+) 
+
+vm <- data.frame(var = names(vm), nb_na = vm)
+
+ggplot(vm, mapping = aes(x = fct_reorder(var, nb_na, .desc = T), y = nb_na)) +
+  geom_bar(stat = "identity") +
+  geom_text(aes(label = paste(round(nb_na/nrow(vehic)*100,1), "%")), vjust = -0.5, size = 2) +
+  labs(
+    x = "",
+    y = "Nombre de valeurs manquantes"
+  ) +
+  theme(
+    axis.text.x = element_text(angle = 70, hjust = 1),
+    text = element_text(size = 12)
+  )
+
+```
+
+## Distribution des variables qualitatives
+
+```{r}
+# Place occupée dans le véhicule
+
+## to check - bug
+place <- usag %>% 
+  mutate(place = as.factor(place)) %>% 
+  group_by(place) %>% 
+  summarise(n = n()) %>% 
+  ggplot(aes(x = fct_reorder(place, n, .desc = T), y = n)) +
+  geom_bar(stat = "identity") +
+  geom_text(aes(label = paste(round(n/nrow(usag)*100,1), "%")), vjust = -0.5, size = 2) + 
+  labs(
+    title = "Place occupée dans le véhicule",
+    x = "",
+    y = "Nombre d'enregistrements"
+  ) +
+  theme(
+    text = element_text(size = 12),
+    axis.text.x = element_text(angle = 70, hjust = 1))
+
+## à refaire autrement
+
+# Catégorie usager
+catu <- usag %>% 
+  group_by(catu) %>% 
+  summarise(n = n()) %>% 
+  ggplot(aes(x = fct_reorder(catu, n, .desc = T), y = n)) +
+  geom_bar(stat = "identity") +
+  geom_text(aes(label = paste(round(n/nrow(usag)*100,1), "%")), vjust = -0.5, size = 2) + 
+  labs(
+    title = "Catégorie usager",
+    x = "",
+    y = "Nombre d'enregistrements"
+  ) +
+  theme(
+    text = element_text(size = 12),
+    axis.text.x = element_text(angle = 70, hjust = 1))
+
+# Gravité de l'accident
+grav <- usag %>% 
+  group_by(grav) %>% 
+  summarise(n = n()) %>% 
+  ggplot(aes(x = fct_reorder(grav, n, .desc = T), y = n)) +
+  geom_bar(stat = "identity") +
+  geom_text(aes(label = paste(round(n/nrow(usag)*100,1), "%")), vjust = -0.5, size = 2) + 
+  labs(
+    title = "Gravité de l'accident",
+    x = "",
+    y = "Nombre d'enregistrements"
+  ) +
+  theme(
+    text = element_text(size = 12),
+    axis.text.x = element_text(angle = 70, hjust = 1))
+
+# Sexe de l'usager
+sexe <- usag %>% 
+  group_by(sexe) %>% 
+  summarise(n = n()) %>% 
+  ggplot(aes(x = fct_reorder(sexe, n, .desc = T), y = n)) +
+  geom_bar(stat = "identity") +
+  geom_text(aes(label = paste(round(n/nrow(usag)*100,1), "%")), vjust = -0.5, size = 2) + 
+  labs(
+    title = "Sexe de l'usager",
+    x = "",
+    y = "Nombre d'enregistrements"
+  ) +
+  theme(
+    text = element_text(size = 12),
+    axis.text.x = element_text(angle = 70, hjust = 1))
+
+# to do : age / année de naissance
+
+# Motif du déplacement
+trajet <- usag %>% 
+  group_by(trajet) %>% 
+  summarise(n = n()) %>% 
+  ggplot(aes(x = fct_reorder(trajet, n, .desc = T), y = n)) +
+  geom_bar(stat = "identity") +
+  geom_text(aes(label = paste(round(n/nrow(usag)*100,1), "%")), vjust = -0.5, size = 2) + 
+  labs(
+    title = "Motif du déplacement",
+    x = "",
+    y = "Nombre d'enregistrements"
+  ) +
+  theme(
+    text = element_text(size = 12),
+    axis.text.x = element_text(angle = 70, hjust = 1))
+
+# to do : locp
+
+# Action du piéton
+actp <- usag %>% 
+  group_by(actp) %>% 
+  summarise(n = n()) %>% 
+  ggplot(aes(x = fct_reorder(actp, n, .desc = T), y = n)) +
+  geom_bar(stat = "identity") +
+  geom_text(aes(label = paste(round(n/nrow(usag)*100,1), "%")), vjust = -0.5, size = 2) + 
+  labs(
+    title = "Action du piéton",
+    x = "",
+    y = "Nombre d'enregistrements"
+  ) +
+  theme(
+    text = element_text(size = 12),
+    axis.text.x = element_text(angle = 70, hjust = 1))
+
+# Accompagnement du piéton
+etatp <- usag %>% 
+  group_by(etatp) %>% 
+  summarise(n = n()) %>% 
+  ggplot(aes(x = fct_reorder(etatp, n, .desc = T), y = n)) +
+  geom_bar(stat = "identity") +
+  geom_text(aes(label = paste(round(n/nrow(usag)*100,1), "%")), vjust = -0.5, size = 2) + 
+  labs(
+    title = "Accompagnement du piéton",
+    x = "",
+    y = "Nombre d'enregistrements"
+  ) +
+  theme(
+    text = element_text(size = 12),
+    axis.text.x = element_text(angle = 70, hjust = 1))
+
+# Présence équipement sécurité
+equipement_secu <- usag %>% 
+  group_by(equipement_secu) %>% 
+  summarise(n = n()) %>% 
+  ggplot(aes(x = fct_reorder(equipement_secu, n, .desc = T), y = n)) +
+  geom_bar(stat = "identity") +
+  geom_text(aes(label = paste(round(n/nrow(usag)*100,1), "%")), vjust = -0.5, size = 2) + 
+  labs(
+    title = "Présence d'un équipement de sécurité",
+    x = "",
+    y = "Nombre d'enregistrements"
+  ) +
+  theme(
+    text = element_text(size = 12),
+    axis.text.x = element_text(angle = 70, hjust = 1))
+
+# Utilisation de l'équipement de sécurité
+utilisation_equipement_secu <- usag %>% 
+  group_by(utilisation_equipement_secu) %>% 
+  summarise(n = n()) %>% 
+  ggplot(aes(x = fct_reorder(utilisation_equipement_secu, n, .desc = T), y = n)) +
+  geom_bar(stat = "identity") +
+  geom_text(aes(label = paste(round(n/nrow(usag)*100,1), "%")), vjust = -0.5, size = 2) + 
+  labs(
+    title = "Utilisation de l'équipement de sécurité",
+    x = "",
+    y = "Nombre d'enregistrements"
+  ) +
+  theme(
+    text = element_text(size = 12),
+    axis.text.x = element_text(angle = 70, hjust = 1))
+```
+
+```{r final_plot_usag, width = '100%', fig.width = 10, fig.height = 30}
+(catu|grav) /
+  (sexe|trajet) /
+  (actp|etatp) /
+  (equipement_secu|utilisation_equipement_secu)
+```
+
+
+
+**To do :**  
+
+Focus sur la métropole : à confirmer avec la team
+
+**Infographie :  **
+--> description des accidents en France  
+  
+**Modèle explicatif :  **
+- Clustering : quels sont les profils types des accidents ? Ex : jeune sans protection en agglo vs...  
+  
+**Modèle prédictif :  **  
+- Prévision des accidents par jour selon météo ? Avec un arbre de décision   
+  
+**Shiny app  **
+Visualisation des accidents en France sur une carte ?  
+Visualisation du taux de mortalité en fonction de la place de l'usager dans la voiture ?
