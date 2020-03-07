@@ -173,3 +173,69 @@ lieux$situ <- factor(lieux$situ,
                                 "Sur trottoir", "Sur piste cyclable"))
 
 ```
+
+
+```{r fonctions}
+
+# Valeurs manquantes
+valeurs_manquantes <- function(data) {
+  vm <- sapply(X = data,
+               function(x)
+                 sum(is.na(x)))
+  
+  vm <- data.frame(var = names(vm), nb_na = vm)
+  
+  ggplot(vm, mapping = aes(x = fct_reorder(var, nb_na, .desc = T), y = nb_na)) +
+    geom_bar(stat = "identity") +
+    geom_text(aes(label = paste(round(
+      nb_na / nrow(data) * 100, 1
+    ), "%")), vjust = -0.5, size = 2) +
+    labs(x = "",
+         y = "Nombre de valeurs manquantes") +
+    theme(axis.text.x = element_text(angle = 70, hjust = 1))
+}
+
+# Distribution variables qualitatives
+
+distr_quali <- function(data, variable, titre = "Titre du graphique", sort = TRUE) {
+    
+  variable <- enquo(variable)
+    
+    if (sort == TRUE) {
+      plot <- data %>%
+        # mutate(!!variable = fct_explicit_na(!!variable)) %>%
+        group_by(!!variable) %>%
+        summarise(n = n()) %>%
+        ggplot(aes(x = fct_reorder(!!variable, n, .desc = T), y = n)) +
+        geom_bar(stat = "identity") +
+        geom_text(aes(label = paste(round(
+          n / nrow(data) * 100, 1
+        ), "%")), vjust = -0.5, size = 2) +
+        labs(title = titre,
+             x = "",
+             y = "Nombre d'enregistrements") +
+        theme(text = element_text(size = 12),
+              axis.text.x = element_text(angle = 70, hjust = 1))
+    }
+    
+    if (sort == FALSE) {
+      plot <- data %>%
+        # mutate(!!variable = fct_explicit_na(!!variable)) %>%
+        group_by(!!variable) %>%
+        summarise(n = n()) %>%
+        ggplot(aes(x = !!variable, y = n)) +
+        geom_bar(stat = "identity") +
+        geom_text(aes(label = paste(round(
+          n / nrow(data) * 100, 1
+        ), "%")), vjust = -0.5, size = 2) +
+        labs(title = titre,
+             x = "",
+             y = "Nombre d'enregistrements") +
+        theme(text = element_text(size = 12),
+              axis.text.x = element_text(angle = 70, hjust = 1))
+      
+    }
+    return(plot)
+  }
+```
+
