@@ -246,6 +246,39 @@ summary(usag) %>%
 valeurs_manquantes(usag)
 ```
 
+## Distribution des variables quantitatives
+
+```{r}
+# âge au moment de l'accident
+usag %>% 
+  mutate(age = 2018 - an_nais,
+         groupe = case_when(
+           age <= 10 ~ "0-10",
+           age > 10 & age <=20 ~ "11-20",
+           age > 20 & age <=30 ~ "21-30",
+           age > 30 & age <=40 ~ "31-40",
+           age > 40 & age <=50 ~ "41-50",
+           age > 50 & age <=60 ~ "51-60",
+           age > 60 & age <=70 ~ "61-70",
+           age > 70 & age <=80 ~ "71-80",
+           age > 80 & age <=90 ~ "81-90",
+           age > 90 ~ ">90"),
+         groupe = factor(groupe, levels = c("0-10", "11-20", "21-30", "31-40", "41-50", "51-60", "61-70", "71-80", "81-90", "> 90"))
+         ) %>% 
+  ggplot(aes(x = groupe)) +
+  geom_histogram(stat = 'count') +
+  labs(
+    x = "",
+    y = "Nombre d'usagers",
+    title = "Distribution de l'âge des usagers l'année de l'accident",
+    subtitle = "Conducteurs, passagers et piétons"
+  )
+
+
+```
+
+
+
 ## Distribution des variables qualitatives
 
 ```{r}
@@ -276,12 +309,11 @@ grav <- distr_quali(data = usag, variable = grav, titre = "Gravité de l'acciden
 # Sexe de l'usager
 sexe <- distr_quali(data = usag, variable = sexe, titre = "Sexe de l'usager")
 
-# to do : age / année de naissance
-
 # Motif du déplacement
 trajet <- distr_quali(data = usag, variable = trajet, titre = "Motif du déplacement")
 
-# to do : locp
+# Localisation du piéton
+locp <- distr_quali(data = usag, variable = locp, titre = "Localisation du piéton")
 
 # Action du piéton
 actp <- distr_quali(data = usag, variable = actp, titre = "Action du piéton")
@@ -300,8 +332,8 @@ utilisation_equipement_secu <- distr_quali(data = usag, variable = utilisation_e
 (catu|grav) /
   (sexe|trajet) /
   (actp|etatp) /
-  (equipement_secu|utilisation_equipement_secu)/
-  place
+  (locp|place) /
+  (equipement_secu|utilisation_equipement_secu)
 ```
 
 # Lieux
@@ -337,6 +369,91 @@ summary(lieux) %>%
 valeurs_manquantes(lieux)
 ```
 
+## Distribution des variables quantitatives
+
+```{r}
+# Nombre total de voie de circulation
+nb_voies <- lieux %>%
+  mutate(nbv = ifelse(test = nbv == 0,
+                      yes = NA,
+                      no = nbv),
+         nbv = ifelse(
+           test = nbv == 1,
+           yes = "1 voie",
+           no = ifelse(test = !is.na(nbv),
+                       yes = paste(nbv, "voies"),
+                       no = nbv)),
+         nbv = factor(nbv, levels = c("1 voie", "2 voies", "3 voies", "4 voies", "5 voies", "6 voies", "7 voies", "8 voies", "9 voies", "10 voies", "11 voies", "12 voies")), 
+         nbv = fct_explicit_na(nbv)) %>% 
+  ggplot(mapping = aes(x = nbv)) +
+  geom_histogram(stat = 'count') +
+  labs(
+    x = "",
+    y = "Nombre de voies sur le lieu de l'accident",
+    title = "Distribution du nombre de voies sur le lieu de l'accident"
+  ) +
+  theme(axis.text.x = element_text(angle = 70, hjust = 1))
+
+# Largeur du terre plein central (TPC) s'il existe
+# comment intérpréter les 0 ? Equivalent à NA ?
+lartpc <- lieux %>% 
+  filter(lartpc > 0) %>% 
+  ggplot(mapping = aes(x = factor(0), y = lartpc)) +
+  geom_boxplot() +
+  labs(title = "Distribution de la largeur du terre plein central",
+       subtitle = "(s'il existe)",
+       x = "",
+       y = "Largeur du terre plein central") +
+  theme(text = element_text(size = 12),
+        axis.text.x = element_blank(),
+        axis.ticks.x = element_blank())
+
+lartpc_out <- lieux %>% 
+  filter(lartpc > 0 & lartpc < 80) %>% 
+  ggplot(mapping = aes(x = factor(0), y = lartpc)) +
+  geom_boxplot() +
+  labs(title = "Distribution de la largeur du terre plein central",
+       subtitle = "Après suppression des outliers",
+       x = "",
+       y = "Largeur du terre plein central") +
+  theme(text = element_text(size = 12),
+        axis.text.x = element_blank(),
+        axis.ticks.x = element_blank())
+
+# Largeur de la chaussée affectée à la circulation des véhicules ne sont pas compris les bandes d'arrêt d'urgence, les TPC et les places de stationnement
+
+larrout <- lieux %>% 
+  filter(larrout > 0) %>% 
+  ggplot(mapping = aes(x = factor(0), y = larrout)) +
+  geom_boxplot() +
+  labs(title = "Distribution de la largeur de la chaussée affectée à la circulation",
+       x = "",
+       y = "Largeur de la chaussée") +
+  theme(text = element_text(size = 12),
+        axis.text.x = element_blank(),
+        axis.ticks.x = element_blank())
+
+larrout_out <- lieux %>% 
+  filter(larrout > 0 & larrout < 200) %>% 
+  ggplot(mapping = aes(x = factor(0), y = larrout)) +
+  geom_boxplot() +
+  labs(title = "Distribution de la largeur de la chaussée affectée à la circulation",
+       subtitle = "Après suppression des outliers",
+       x = "",
+       y = "Largeur de la chaussée") +
+  theme(text = element_text(size = 12),
+        axis.text.x = element_blank(),
+        axis.ticks.x = element_blank())
+
+```
+
+```{r final_plot_lieux_quanti, width = '100%', fig.width = 10, fig.height = 15}
+nb_voies /
+  (lartpc | lartpc_out) /
+  (larrout | larrout_out)
+```
+
+
 ## Distribution des variables qualitatives
 
 ```{r plots_lieux}
@@ -364,6 +481,14 @@ infra <- distr_quali(data = lieux, variable = infra, titre = "Aménagement - inf
 
 # Situation de l'accident
 situ <- distr_quali(data = lieux, variable = situ, titre = "Situation de l'accident")
+```
+
+```{r final_plot_lieux, width = '100%', fig.width = 10, fig.height = 30}
+catr /
+  (circ | vosp) /
+  (prof | plan) /
+  (surf|infra) /
+  situ
 ```
 
 **To do :**  
