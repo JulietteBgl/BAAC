@@ -1,0 +1,124 @@
+---
+title: "Analyses multivariées"
+output:
+  html_document:
+    df_print: paged
+    toc: true
+    toc_float: true
+    theme: readable
+    highlight: tango
+    #code_folding: show
+    number_sections: true
+---
+
+```{r initial_chunk1, echo = FALSE, warning = FALSE, message = FALSE}
+library("knitr")
+opts_chunk$set(echo = FALSE, eval = TRUE, warning = FALSE, message = FALSE, fig.align = 'center', dpi = 300, out.width = '75%')
+```
+
+```{r test-main, child = 'child_source.Rmd'}
+```
+
+```{r lib}
+library(sf)
+library(plotly)
+```
+
+# Localisation des accidents en 2018
+
+```{r}
+### Shapefiles via data.gouv.fr
+# https://www.data.gouv.fr/fr/datasets/contours-des-regions-francaises-sur-openstreetmap/
+# https://www.data.gouv.fr/fr/datasets/contours-des-departements-francais-issus-d-openstreetmap/
+
+# dir.create("shapefiles")
+
+## French departements
+# download.file(
+#    url = "http://osm13.openstreetmap.fr/~cquest/openfla/export/departements-20140306-100m-shp.zip",
+#    destfile = "shapefiles/departements-20140306-100m-shp.zip"
+#  )
+#  unzip(zipfile = "shapefiles/departements-20140306-100m-shp.zip",
+#        exdir = "shapefiles/departements-20140306-100m-shp")
+
+# load shapefile data
+departements <- st_read(dsn = "shapefiles/departements-20140306-100m-shp/")
+```
+
+
+```{r}
+# Nombre d'accidents par département
+map_data <- caract %>% 
+  group_by(dep) %>% 
+  summarise(n = n())
+
+# Join avec le shapefile pour récupérer la geometry
+map_data <- merge(
+  x = map_data,
+  y = departements,
+  by.x = "dep",
+  by.y = "code_insee",
+  all.x = TRUE)
+
+# map
+map <- ggplot(data = map_data) +
+  geom_sf(aes(geometry = geometry, fill = n)) +
+  scale_fill_gradient(low = "lightgreen", high = "red", na.value = NA) +
+  labs(x = "", 
+       y = "", 
+       title = "Nombre d'accident par département en 2018",
+       fill = "") +
+  theme(
+    axis.text = element_blank(),
+    axis.ticks = element_blank()
+  )
+
+
+ggplotly(map) %>% config(displayModeBar = F)
+```
+
+
+# Analyse du taux de mortalité selon la place dans le véhicule
+To do : heatmap
+
+
+
+# Analyse des accidents
+
+## Pourcentage d'accidents impliquants des piétons
+
+## Pourcentage d'accidents impliquants un autre véhicule
+
+# Analyse des usagers
+
+taux mortalité par age x catégorie usagers
+
+
+## Conducteurs
+âge
+
+## Piétons
+âge
+
+# Analyse des voies
+
+## Quels sont les types de voies les plus dangereuses ?
+
+## Quel est le type d'intersection le plus dangereux ?
+
+
+## Quel est l'impact de l'état de la voie sur le nombre d'accident ?
+
+## Quel est l'impact de l'état de la voie sur le taux de mortalité ?
+
+
+## Quel est l'impact du moment de la journée sur le nombre d'accidents ?
+
+## Quel est l'impact du moment de la journée sur le taux de mortalité ?
+
+
+Test de student / comparaison de moyenne
+box plots
+
+
+
