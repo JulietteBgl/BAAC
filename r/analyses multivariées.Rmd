@@ -13,7 +13,8 @@ output:
 
 ```{r initial_chunk1, echo = FALSE, warning = FALSE, message = FALSE}
 library("knitr")
-opts_chunk$set(echo = FALSE, eval = TRUE, warning = FALSE, message = FALSE, fig.align = 'center', dpi = 300, out.width = '75%')
+opts_chunk$set(echo = FALSE, eval = TRUE, warning = FALSE, message = FALSE, fig.align = 'center', #dpi = 300, 
+               out.width = '100%', out.height = '100%')
 ```
 
 ```{r test-main, child = 'child_source.Rmd'}
@@ -42,11 +43,18 @@ library(plotly)
 #        exdir = "shapefiles/departements-20140306-100m-shp")
 
 # load shapefile data
-departements <- st_read(dsn = "shapefiles/departements-20140306-100m-shp/")
+departements <- st_read(dsn = "../data/shapefiles/departements-20140306-100m-shp/")
+
+# Population par département
+pop_dep <- read.csv2("../data/departements.csv")
+
+# Ajout d'un zero
+pop_dep <- pop_dep %>% 
+  mutate(Code = stri_pad_left(str = Code, width = 2, pad = 0))
 ```
 
 
-```{r}
+```{r fig.height=10, fig.width=15}
 # Nombre d'accidents par département
 map_data <- caract %>% 
   group_by(dep) %>% 
@@ -60,28 +68,167 @@ map_data <- merge(
   by.y = "code_insee",
   all.x = TRUE)
 
+# Join avec la population par département
+map_data <- merge(
+  x = map_data,
+  y = pop_dep,
+  by.x = "dep",
+  by.y = "Code",
+  all.x = TRUE)
+
+# Ajout du taux d'accident pour 1000 habitant par département
+map_data <- map_data %>% 
+  mutate(tx = round(n/Population*1000,2),
+         text = paste0(Département, "\n", "Nombre d'accidents pour 1000 habitant :", tx))
+  
 # map
 map <- ggplot(data = map_data) +
-  geom_sf(aes(geometry = geometry, fill = n)) +
+  geom_sf(aes(geometry = geometry, fill = tx, text = text)) +
   scale_fill_gradient(low = "lightgreen", high = "red", na.value = NA) +
   labs(x = "", 
        y = "", 
-       title = "Nombre d'accident par département en 2018",
+       title = "Nombre d'accidents pour 1000 habitants par département en 2018",
        fill = "") +
   theme(
     axis.text = element_blank(),
-    axis.ticks = element_blank()
+    axis.ticks = element_blank(),
+    panel.background = element_blank()
   )
 
+ggplotly(map, tooltip = "text") %>% config(displayModeBar = F)
 
-ggplotly(map) %>% config(displayModeBar = F)
 ```
 
+To do : récupérer la pop par département 
 
-# Analyse du taux de mortalité selon la place dans le véhicule
-To do : heatmap
+# Analyse des risques selon la place dans le véhicule
 
+```{r}
+# Filtre sur les voitures
+voitures <- vehic %>% 
+  filter(catv == "VL seul")
 
+# Jointure avec usagers
+heatmap <- merge(
+  x = usag,
+  y = voitures,
+  by = "Num_Acc"
+)
+
+heatmap <- heatmap %>% 
+  filter(catu %in% c("Conducteur", "Passager")) %>% 
+  group_by(place) %>% 
+  mutate(total_group = n()) %>% 
+  group_by(place, grav, total_group) %>% 
+  summarise(cnt_cat = n()) %>% 
+  mutate(perc = round(cnt_cat / total_group * 100, 1),
+         text = paste0("Place ", place, "\n", grav, " : ", perc, "%", "\n", "Nombre d'usagers : ", cnt_cat))
+
+heatmap <- heatmap %>% 
+  mutate(
+    lignes = case_when(
+    place == 1 ~ 3,
+    place == 2 ~ 1,
+    place == 3 ~ 1,
+    place == 4 ~ 3,
+    place == 5 ~ 2,
+    place == 6 ~ 2,
+    place == 7 ~ 3,
+    place == 8 ~ 2,
+    place == 9 ~ 1
+  ),
+  colonnes = case_when(
+    place == 1 ~ 3,
+    place == 2 ~ 3,
+    place == 3 ~ 1,
+    place == 4 ~ 1,
+    place == 5 ~ 1,
+    place == 6 ~ 3,
+    place == 7 ~ 2,
+    place == 8 ~ 2,
+    place == 9 ~ 2
+  ))
+```
+
+```{r, fig.width = 10, fig.height = 7}
+# Usager = Tué
+vehic_heatmap <- ggplot(data = heatmap %>% filter(grav == "Tué"), 
+                        mapping = aes(x = colonnes, y = lignes, fill = perc, text = text)) +
+  geom_tile() +
+  theme(
+    axis.title = element_blank(),
+    axis.text = element_blank(),
+    axis.ticks = element_blank(),
+    panel.background = element_blank()
+  ) +
+  scale_fill_gradient(low = "#da3349", high = "#660000") +
+  labs(
+    title = "Pourcentage de décès selon la place dans le véhicule",
+    fill = ""
+  )
+
+ggplotly(vehic_heatmap, tooltip = "text") %>% config(displayModeBar = F)
+```
+
+```{r, fig.width = 10, fig.height = 7}
+# Usager = hospitalisé
+vehic_heatmap <- ggplot(data = heatmap %>% filter(grav == "Blessé hospitalisé"), 
+                        mapping = aes(x = colonnes, y = lignes, fill = perc, text = text)) +
+  geom_tile() +
+  theme(
+    axis.title = element_blank(),
+    axis.text = element_blank(),
+    axis.ticks = element_blank(),
+    panel.background = element_blank()
+  ) +
+  scale_fill_gradient(low = "#da3349", high = "#660000") +
+  labs(
+    title = "Pourcentage de blessés hospitalisés\n selon la place dans le véhicule",
+    fill = ""
+  )
+
+ggplotly(vehic_heatmap, tooltip = "text") %>% config(displayModeBar = F)
+```
+
+```{r, fig.width = 10, fig.height = 7}
+# Usager = blessés légers
+vehic_heatmap <- ggplot(data = heatmap %>% filter(grav == "Blessé léger"), 
+                        mapping = aes(x = colonnes, y = lignes, fill = perc, text = text)) +
+  geom_tile() +
+  theme(
+    axis.title = element_blank(),
+    axis.text = element_blank(),
+    axis.ticks = element_blank(),
+    panel.background = element_blank()
+  ) +
+  scale_fill_gradient(low = "#da3349", high = "#660000") +
+  labs(
+    title = "Pourcentage de blessés légers\n selon la place dans le véhicule",
+    fill = ""
+  )
+
+ggplotly(vehic_heatmap, tooltip = "text") %>% config(displayModeBar = F)
+```
+
+```{r, fig.width = 10, fig.height = 7}
+# Usager = indemne
+vehic_heatmap <- ggplot(data = heatmap %>% filter(grav == "Indemne"), 
+                        mapping = aes(x = colonnes, y = lignes, fill = perc, text = text)) +
+  geom_tile() +
+  theme(
+    axis.title = element_blank(),
+    axis.text = element_blank(),
+    axis.ticks = element_blank(),
+    panel.background = element_blank()
+  ) +
+  scale_fill_gradient(low = "#da3349", high = "#660000") +
+  labs(
+    title = "Pourcentage d'usagers indemnes\n selon la place dans le véhicule",
+    fill = ""
+  )
+
+ggplotly(vehic_heatmap, tooltip = "text") %>% config(displayModeBar = F)
+```
 
 # Analyse des accidents
 
@@ -100,7 +247,7 @@ taux mortalité par age x catégorie usagers
 ## Piétons
 âge
 
-# Analyse des voies
+# Analyse des sources de danger
 
 ## Quels sont les types de voies les plus dangereuses ?
 
@@ -119,6 +266,10 @@ taux mortalité par age x catégorie usagers
 
 Test de student / comparaison de moyenne
 box plots
+
+
+
+## Quels sont les véhicules les plus dangereux ?
 
 
 
