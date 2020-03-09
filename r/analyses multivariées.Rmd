@@ -54,7 +54,7 @@ pop_dep <- pop_dep %>%
 ```
 
 
-```{r fig.height=10, fig.width=15}
+```{r, out.width="100%"}
 # Nombre d'accidents par département
 map_data <- caract %>% 
   group_by(dep) %>% 
@@ -79,12 +79,25 @@ map_data <- merge(
 # Ajout du taux d'accident pour 1000 habitant par département
 map_data <- map_data %>% 
   mutate(tx = round(n/Population*1000,2),
-         text = paste0(Département, "\n", "Nombre d'accidents pour 1000 habitant :", tx))
+         text = paste0(Département, "\n", "Nombre d'accidents pour 1000 habitant :", tx)#,
+         # bin = case_when(
+         #   tx < 0.45 ~ "0.37 - 0.45",
+         #   tx >= 0.45 & tx < 0.48 ~ "0.45 - 0.48",
+         #   tx >= 0.48 & tx < 0.54 ~ "0.48 - 0.54",
+         #   tx >= 0.54 & tx < 0.63 ~ "0.54 - 0.63",
+         #   tx >= 0.63 & tx < 0.67 ~ "0.63 - 0.67",
+         #   tx >= 0.67 & tx < 0.72 ~ "0.67 - 0.72",
+         #   tx >= 0.72 & tx < 0.77 ~ "0.72 - 0.77",
+         #   tx >= 0.77 & tx < 0.91 ~ "0.77 - 0.91",
+         #   tx >= 0.91 & tx < 1.13 ~ "0.91 - 1.13",
+         #   tx >= 1.13 ~ "1.13 - 2.55"
+         # )
+         )
   
 # map
 map <- ggplot(data = map_data) +
-  geom_sf(aes(geometry = geometry, fill = tx, text = text)) +
-  scale_fill_gradient(low = "lightgreen", high = "red", na.value = NA) +
+  geom_sf(aes(geometry = geometry, fill = tx, text = text), color = "darkgrey", size = 0.1) +
+  scale_fill_gradient(low = "darkgreen", high = "#660000", na.value = NA) +
   labs(x = "", 
        y = "", 
        title = "Nombre d'accidents pour 1000 habitants par département en 2018",
@@ -92,14 +105,16 @@ map <- ggplot(data = map_data) +
   theme(
     axis.text = element_blank(),
     axis.ticks = element_blank(),
-    panel.background = element_blank()
+    panel.background = element_blank(),
+    plot.margin = margin(0,0,0,0)
   )
 
-ggplotly(map, tooltip = "text") %>% config(displayModeBar = F)
+ggplotly(map, tooltip = "text") %>% 
+  # layout(legend = list(orientation = "h", x = 0, y = 0)) %>% 
+  config(displayModeBar = F) 
 
+# A tester avec leaflet
 ```
-
-To do : récupérer la pop par département 
 
 # Analyse des risques selon la place dans le véhicule
 
@@ -150,7 +165,7 @@ heatmap <- heatmap %>%
   ))
 ```
 
-```{r, fig.width = 10, fig.height = 7}
+```{r, out.width="100%"}
 # Usager = Tué
 vehic_heatmap <- ggplot(data = heatmap %>% filter(grav == "Tué"), 
                         mapping = aes(x = colonnes, y = lignes, fill = perc, text = text)) +
@@ -170,7 +185,7 @@ vehic_heatmap <- ggplot(data = heatmap %>% filter(grav == "Tué"),
 ggplotly(vehic_heatmap, tooltip = "text") %>% config(displayModeBar = F)
 ```
 
-```{r, fig.width = 10, fig.height = 7}
+```{r, out.width="100%"}
 # Usager = hospitalisé
 vehic_heatmap <- ggplot(data = heatmap %>% filter(grav == "Blessé hospitalisé"), 
                         mapping = aes(x = colonnes, y = lignes, fill = perc, text = text)) +
@@ -190,7 +205,7 @@ vehic_heatmap <- ggplot(data = heatmap %>% filter(grav == "Blessé hospitalisé"
 ggplotly(vehic_heatmap, tooltip = "text") %>% config(displayModeBar = F)
 ```
 
-```{r, fig.width = 10, fig.height = 7}
+```{r, out.width="100%"}
 # Usager = blessés légers
 vehic_heatmap <- ggplot(data = heatmap %>% filter(grav == "Blessé léger"), 
                         mapping = aes(x = colonnes, y = lignes, fill = perc, text = text)) +
@@ -210,7 +225,7 @@ vehic_heatmap <- ggplot(data = heatmap %>% filter(grav == "Blessé léger"),
 ggplotly(vehic_heatmap, tooltip = "text") %>% config(displayModeBar = F)
 ```
 
-```{r, fig.width = 10, fig.height = 7}
+```{r, out.width="100%"}
 # Usager = indemne
 vehic_heatmap <- ggplot(data = heatmap %>% filter(grav == "Indemne"), 
                         mapping = aes(x = colonnes, y = lignes, fill = perc, text = text)) +
@@ -247,12 +262,15 @@ taux mortalité par age x catégorie usagers
 ## Piétons
 âge
 
+## Nombre de personnes par voiture + moto etc en moyenne
+
 # Analyse des sources de danger
 
 ## Quels sont les types de voies les plus dangereuses ?
 
 ## Quel est le type d'intersection le plus dangereux ?
 
+## Nombre de tués ou blessée hospitalisés vs nb total d'accident
 
 ## Quel est l'impact de l'état de la voie sur le nombre d'accident ?
 
@@ -261,15 +279,63 @@ taux mortalité par age x catégorie usagers
 
 ## Quel est l'impact du moment de la journée sur le nombre d'accidents ?
 
-## Quel est l'impact du moment de la journée sur le taux de mortalité ?
+```{r}
+# Nombre d'accidents en fonction du moment de la journée
+caract %>% 
+  group_by(lum) %>% 
+  summarise(nb_accidents = n()) %>% 
+  ggplot(aes(x = fct_reorder(lum, nb_accidents), y = nb_accidents)) +
+  geom_bar(stat = "identity") +
+  coord_flip() +
+  labs(
+    x = "",
+    y = "Nombre d'accidents"
+  )
+```
 
+
+## Quel est l'impact du moment de la journée sur le taux de mortalité ?
+```{r}
+# Nombre d'accidents graves en fonction du moment de la journée
+day_grav <- merge(
+  x = usag,
+  y = caract,
+  by = "Num_Acc"
+)
+
+# filtre de façon à ne conserver que le blessé le plus grave pour chaque accident
+
+day_grav %>% 
+  mutate(grav = factor(grav, levels = c("Tué", "Blessé hospitalisé", "Blessé léger", "Indemne")),
+         lum = factor(lum, levels = c("Crépuscule ou aube", "Plein jour", "Nuit avec éclairage public allumé", "Nuit avec éclairage public non allumé", "Nuit sans éclairage public")
+)) %>% 
+  arrange(Num_Acc, grav) %>% 
+  group_by(Num_Acc) %>% 
+  mutate(rank = seq(1:n())) %>% 
+  filter(rank == 1) %>% 
+  ungroup() %>% 
+  group_by(lum, grav) %>% 
+  summarise(nb_accidents = n()) %>% 
+  ggplot(aes(x = fct_reorder(lum, nb_accidents), y = nb_accidents, fill = grav)) +
+  geom_bar(position = "fill", stat = "identity") +
+  coord_flip() +
+  labs(
+    title = "Distribution de la gravité de l'accident en fonction du moment de la journée",
+    subtitle = "Focus sur le blessé le plus grave rattaché à l'accident",
+    x = "",
+    y = "Nombre d'accidents"
+  )
+
+# to do : changer les couleurs
+```
 
 Test de student / comparaison de moyenne
 box plots
 
-
+# est-ce que le temps est un facteur aggravant ?
 
 ## Quels sont les véhicules les plus dangereux ?
+Les plus impliqués dans des accidents ?
 
 
 
