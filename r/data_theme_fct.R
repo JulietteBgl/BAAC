@@ -12,7 +12,7 @@ library("patchwork") # combine plots
 # set default ggplot theme
 theme_set(
   theme_light(
-    base_size = 20
+    base_size = 15
   ) +
     theme(
       text = element_text(family = "Gibson", colour = "gray10"),
