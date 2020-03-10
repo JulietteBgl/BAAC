@@ -16,7 +16,8 @@ library("knitr")
 opts_chunk$set(echo = FALSE, eval = TRUE, warning = FALSE, message = FALSE, fig.align = 'center', dpi = 300, out.width = '75%')
 ```
 
-```{r test-main, child = 'child_source.Rmd'}
+```{r}
+source("data_theme_fct.R")
 ```
 
 # Caractéristiques
@@ -263,7 +264,7 @@ usag %>%
            age > 70 & age <=80 ~ "71-80",
            age > 80 & age <=90 ~ "81-90",
            age > 90 ~ ">90"),
-         groupe = factor(groupe, levels = c("0-10", "11-20", "21-30", "31-40", "41-50", "51-60", "61-70", "71-80", "81-90", "> 90"))
+         groupe = factor(groupe, levels = c("0-10", "11-20", "21-30", "31-40", "41-50", "51-60", "61-70", "71-80", "81-90", ">90"))
          ) %>% 
   ggplot(aes(x = groupe)) +
   geom_histogram(stat = 'count') +
