@@ -44,7 +44,7 @@ scale_fill_continuous <- function(...) scale_fill_viridis_c(..., option = "magma
 scale_fill_discrete <- function(...) scale_fill_manual(..., values = discrete_colors)
 
 # Importation des fichiers --------------------------------------------------------
-annee <- 2018
+annee <- 2017
 
 caract <- read.csv(file = paste0("data/caracteristiques-",annee,".csv"), header = TRUE, sep = ",")
 vehic <- read.csv(file = paste0("data/vehicules-",annee,".csv"), header = TRUE, sep = ",")
@@ -247,3 +247,85 @@ distr_quali <- function(data, variable, titre = "Titre du graphique", sort = TRU
   }
   return(plot)
 }
+
+
+####Export
+
+library(writexl) 
+
+write_xlsx(caract2017, "data/spss/caract2017.xlsx")
+write_xlsx(lieux2017, "data/spss/lieux2017.xlsx")
+write_xlsx(usag2017, "data/spss/usag2017.xlsx")
+write_xlsx(vehic2017, "data/spss/vehic2017.xlsx")
+
+###Fusion
+
+
+bdd_complete_test<-merge(usag2017,caract2017,by="Num_Acc",all.x = TRUE, all.y = TRUE)
+bdd_complete_test<-merge(bdd_complete_test,vehic2017,by="Num_Acc",all.x = TRUE, all.y = TRUE)
+
+
+bdd_complete_test <- (usag2017 %>% full_join(caract2017, by ="Num_Acc") 
+                               %>% inner_join(vehic2017, by ="Num_Acc")
+                               %>% inner_join(usag2017, by ="Num_Acc"))
+
+
+bdd_complete_test <- bdd_complete_test %>% left_join(vehic2017, by ="Num_Acc")
+
+# Typologies d'accidents - on ne garde que le blessé le plus grave par accident
+global_acc <- usag2017 %>% 
+  inner_join(caract2017) %>% 
+  mutate(grav = factor(grav, levels = c("Tué", "Blessé hospitalisé", "Blessé léger", "Indemne")),
+         int = if_else(int != "Hors intersection", "Intersection", "Hors intersection"),
+         zone = if_else(dep %in% c(75, 77, 78, 91, 92, 93, 94, 95), "IDF", "Province")
+  ) %>% 
+  arrange(Num_Acc, grav) %>% 
+  group_by(Num_Acc) %>% 
+  mutate(rank = seq(1:n())) %>% 
+  filter(rank == 1) %>% 
+  inner_join(vehic2017) %>% 
+  inner_join(lieux2017) %>% 
+  mutate(age = 2017 - an_nais,
+         groupe_age = case_when(
+           age <= 16 ~ "0-16",
+           age > 16 & age <=25 ~ "17-25",
+           age > 25 & age <=35 ~ "26-35",
+           age > 35 & age <=45 ~ "36-45",
+           age > 45 & age <=55 ~ "46-55",
+           age > 55 & age <=65 ~ "56-65",
+           age > 65 ~ "> 65"),
+         obs = if_else(!is.na(obs), "Obstacle", "Pas d'obstacle"),
+         plan = if_else(plan != "Partie rectiligne", "En courbe", "Partie rectiligne"),
+         catv = case_when(
+           catv %in% c("Tramway", "Autobus", "Train", "Autocar") ~ "Transport en commun",
+           stri_detect_fixed(catv, "Scooter") ~ "2 roues motorisé",
+           stri_detect_fixed(catv, "Motocyclette") ~ "2 roues motorisé",
+           catv == "Cyclomoteur < 50cm3" ~ "2 roues motorisé",
+           stri_detect_fixed(catv, "Tracteur") ~ "Tracteur",
+           stri_detect_fixed(catv, "PL") ~ "Engin spécial",
+           catv == "Engin spécial" ~ "Engin spécial",
+           stri_detect_fixed(catv, "Quad") ~ "Quad",
+           catv %in% c("VL seul", "Voiturette") ~ "Voiture",
+           stri_detect_fixed(catv, "VU") ~ "Véhicule utilitaire",
+           catv == "Bicyclette" ~ "Vélo",
+           catv == "Autre véhicule" ~ "Autre véhicule"),
+         prof = if_else(prof %in% c("Bas de côte", "Sommet de côte", "Pente"), "Pente", "Plat")
+  ) %>% 
+  filter(catv != 'Quad' &
+           !is.na(atm) &
+           !is.na(surf) &
+           !is.na(prof) &
+           !is.na(plan) &
+           !is.na(groupe_age) &
+           #focus sur les routes
+           catr %in% c("Autoroute", "Route Départementale", "Voie Communale", "Route Nationale")
+  ) %>% 
+  ungroup()
+
+# verif<- usag2017 
+# 
+# sapply(verif, function(x) sum(!duplicated(x)))
+# # dplyr
+# caract2017 %>% summarise_all(funs(n_distinct))
+# # en combinant les deux :
+# sapply(caract2017, n_distinct)
