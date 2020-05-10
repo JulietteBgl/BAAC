@@ -33,11 +33,15 @@ scale_colour_discrete <- function(...) scale_colour_manual(..., values = discret
 scale_fill_continuous <- function(...) scale_fill_viridis_c(..., option = "magma")
 scale_fill_discrete <- function(...) scale_fill_manual(..., values = discrete_colors)
 
+# Importation des fichiers --------------------------------------------------------
+annee <- 2018
+
+caract <- read.csv(file = paste0("data/caracteristiques-",annee,".csv"), header = TRUE, sep = ",")
+vehic <- read.csv(file = paste0("data/vehicules-",annee,".csv"), header = TRUE, sep = ",")
+usag <- read.csv(file = paste0("data/usagers-",annee,".csv"), header = TRUE, sep = ",")
+lieux <- read.csv(file = paste0("data/lieux-",annee,".csv"), header = TRUE, sep = ",")
 
 # Caractéristiques --------------------------------------------------------
-
-# Import du fichier
-caract <- read.csv(file = "../data/caracteristiques-2018.csv", header = TRUE, sep = ",")
 
 # Remplacer les "\xe9" par des é (sinon bug encodage UTF8)
 caract <- caract %>% 
@@ -72,9 +76,6 @@ caract$gps <- factor(caract$gps, levels = c("M","A","G","R","Y"), labels = c("M�
 
 # Véhicules ---------------------------------------------------------------
 
-# Import du fichier
-vehic <- read.csv(file = "../data/vehicules-2018.csv", header = TRUE, sep = ",")
-
 # Transformation des variables quantitatives en facteur
 vehic$Num_Acc <- factor(vehic$Num_Acc)
 
@@ -91,9 +92,6 @@ vehic$choc <- factor(vehic$choc, levels = c(1,2,3,4,5,6,7,8,9), labels = c("Avan
 vehic$manv <- factor(vehic$manv, levels =  c(1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24), labels = c("Sans changement de direction","Même sens, même file","Entre 2 files","En marche arrière","A contresens","En franchissant le terre-plein central","Dans le couloir bus, dans le même sens","Dans le couloir bus, dans le sens inverse","En s’insérant","En faisant demi-tour sur la chaussée","Changeant de file A gauche","Changeant de file A droite","Déporté A gauche","Déporté A droite","Tournant A gauche","Tournant A droite","Dépassant A gauche","Dépassant A droite","Traversant la chaussée","Manoeuvre de stationnement","Manoeuvre d’évitement","Ouverture de porte","Arrêté (hors stationnement)","En stationnement (avec occupants)"))
 
 # Usagers -----------------------------------------------------------------
-
-# Import du fichier
-usag <- read.csv(file = "../data/usagers-2018.csv", header = TRUE, sep = ",")
 
 # Transformation des variables quantitatives en facteur
 usag$Num_Acc <- factor(usag$Num_Acc)
@@ -129,9 +127,6 @@ usag$actp <- factor(usag$actp, levels = c(1,2,3,4,5,6,9), labels = c("Se dépla�
 usag$etatp <- factor(usag$etatp, levels = c(1,2,3), labels = c("Seul","Accompagné","En groupe"))
 
 # Lieux -------------------------------------------------------------------
-
-# Import du fichier
-lieux <- read.csv(file = "../data/lieux-2018.csv", header = TRUE, sep = ",")
 
 # Transformation des variables quantitatives en facteur
 lieux$Num_Acc <- factor(lieux$Num_Acc)
@@ -171,6 +166,14 @@ lieux$situ <- factor(lieux$situ,
                      levels =  1:5, 
                      labels = c("Sur chaussée","Sur bande d'arrêt d'urgence","Sur accotement",
                                 "Sur trottoir", "Sur piste cyclable"))
+
+# Réattribution dans les bons objets  -------------------------------------------------------------------
+assign(paste0("caract",annee),caract)
+assign(paste0("vehic",annee),vehic)
+assign(paste0("usag",annee),usag)
+assign(paste0("lieux",annee),lieux)
+
+remove(list = c("caract","vehic","usag","lieux"))
 
 # Fonctions ---------------------------------------------------------------
 
