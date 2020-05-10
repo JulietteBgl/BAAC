@@ -33,11 +33,15 @@ scale_colour_discrete <- function(...) scale_colour_manual(..., values = discret
 scale_fill_continuous <- function(...) scale_fill_viridis_c(..., option = "magma")
 scale_fill_discrete <- function(...) scale_fill_manual(..., values = discrete_colors)
 
+# Importation des fichiers --------------------------------------------------------
+annee <- 2018
+
+caract <- read.csv(file = paste0("data/caracteristiques-",annee,".csv"), header = TRUE, sep = ",")
+vehic <- read.csv(file = paste0("data/vehicules-",annee,".csv"), header = TRUE, sep = ",")
+usag <- read.csv(file = paste0("data/usagers-",annee,".csv"), header = TRUE, sep = ",")
+lieux <- read.csv(file = paste0("data/lieux-",annee,".csv"), header = TRUE, sep = ",")
 
 # Caractéristiques --------------------------------------------------------
-
-# Import du fichier
-caract <- read.csv(file = "../data/caracteristiques-2018.csv", header = TRUE, sep = ",")
 
 # Remplacer les "\xe9" par des é (sinon bug encodage UTF8)
 caract <- caract %>% 
@@ -72,9 +76,6 @@ caract$gps <- factor(caract$gps, levels = c("M","A","G","R","Y"), labels = c("M�
 
 # Véhicules ---------------------------------------------------------------
 
-# Import du fichier
-vehic <- read.csv(file = "../data/vehicules-2018.csv", header = TRUE, sep = ",")
-
 # Transformation des variables quantitatives en facteur
 vehic$Num_Acc <- factor(vehic$Num_Acc)
 
@@ -91,9 +92,6 @@ vehic$choc <- factor(vehic$choc, levels = c(1,2,3,4,5,6,7,8,9), labels = c("Avan
 vehic$manv <- factor(vehic$manv, levels =  c(1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24), labels = c("Sans changement de direction","Même sens, même file","Entre 2 files","En marche arrière","A contresens","En franchissant le terre-plein central","Dans le couloir bus, dans le même sens","Dans le couloir bus, dans le sens inverse","En s’insérant","En faisant demi-tour sur la chaussée","Changeant de file A gauche","Changeant de file A droite","Déporté A gauche","Déporté A droite","Tournant A gauche","Tournant A droite","Dépassant A gauche","Dépassant A droite","Traversant la chaussée","Manoeuvre de stationnement","Manoeuvre d’évitement","Ouverture de porte","Arrêté (hors stationnement)","En stationnement (avec occupants)"))
 
 # Usagers -----------------------------------------------------------------
-
-# Import du fichier
-usag <- read.csv(file = "../data/usagers-2018.csv", header = TRUE, sep = ",")
 
 # Transformation des variables quantitatives en facteur
 usag$Num_Acc <- factor(usag$Num_Acc)
@@ -116,11 +114,11 @@ usag <- usag %>%
 
 usag$equipement_secu <- factor(usag$equipement_secu, 
                                levels = c(1,2,3,4,9), 
-                               labels = c("Ceinture","Casque","Dispositif enfants","Equipement réfléchissant ","Autre"))
+                               labels = c("Ceinture","Casque","Dispositif enfants","Equipement réfléchissant ","Autre"))
 
 usag$utilisation_equipement_secu <- factor(usag$utilisation_equipement_secu, 
                                            levels = c(1,2,3), 
-                                           labels = c("Oui","Non","Non déterminable"))
+                                           labels = c("Oui","Non","Non déterminable"))
 
 usag$locp <- factor(usag$locp, levels = c(1,2,3,4,5,6,7,8), labels = c("Sur chaussée A + 50 m du passage piéton","Sur chaussée A – 50 m du passage piéton","Sur passage piéton Sans signalisation lumineuse","Sur passage piéton Avec signalisation lumineuse","Sur trottoir","Sur accotement","Sur refuge ou BAU","Sur contre allée"))
 
@@ -130,32 +128,29 @@ usag$etatp <- factor(usag$etatp, levels = c(1,2,3), labels = c("Seul","Accompagn
 
 # Lieux -------------------------------------------------------------------
 
-# Import du fichier
-lieux <- read.csv(file = "../data/lieux-2018.csv", header = TRUE, sep = ",")
-
 # Transformation des variables quantitatives en facteur
 lieux$Num_Acc <- factor(lieux$Num_Acc)
 
 lieux$catr <- factor(lieux$catr, 
                      levels =  c(1,2,3,4,5,6,9), 
-                     labels = c("Autoroute","Route Nationale","Route Départementale","Voie Communale",
-                                "Hors réseau public","Parc de stationnement ouvert à la circulation publique","autre"))
+                     labels = c("Autoroute","Route Nationale","Route Départementale","Voie Communale",
+                                "Hors réseau public","Parc de stationnement ouvert à la circulation publique","autre"))
 
 lieux$circ <- factor(lieux$circ, 
                      levels =  1:4, 
-                     labels = c("A sens unique","Bidirectionnelle","A chaussées séparées","Avec voies d’affectation variable"))
+                     labels = c("A sens unique","Bidirectionnelle","A chaussées séparées","Avec voies d’affectation variable"))
 
 lieux$vosp <- factor(lieux$vosp, 
                      levels =  1:3, 
-                     labels = c("Piste cyclable","Banque cyclable","Voie réservée"))
+                     labels = c("Piste cyclable","Banque cyclable","Voie réservée"))
 
 lieux$prof <- factor(lieux$prof, 
                      levels =  1:4, 
-                     labels = c("Plat","Pente","Sommet de côte","Bas de côte"))
+                     labels = c("Plat","Pente","Sommet de côte","Bas de côte"))
 
 lieux$plan <- factor(lieux$plan, 
                      levels =  1:4, 
-                     labels = c("Partie rectiligne","En courbe à gauche","En courbe à̀ droite","En « S »"))
+                     labels = c("Partie rectiligne","En courbe à gauche","En courbe à̀ droite","En « S »"))
 
 
 lieux$surf <- factor(lieux$surf, 
@@ -164,13 +159,21 @@ lieux$surf <- factor(lieux$surf,
 
 lieux$infra <- factor(lieux$infra, 
                       levels =  1:7, 
-                      labels = c("Souterrain - tunnel","Pont - autopont","Bretelle d’échangeur ou de raccordement",
+                      labels = c("Souterrain - tunnel","Pont - autopont","Bretelle d’échangeur ou de raccordement",
                                  "Voie ferrée", "Carrefour aménagé", "Zone piétonne", "Zone de péage"))
 
 lieux$situ <- factor(lieux$situ, 
                      levels =  1:5, 
                      labels = c("Sur chaussée","Sur bande d'arrêt d'urgence","Sur accotement",
                                 "Sur trottoir", "Sur piste cyclable"))
+
+# Réattribution dans les bons objets  -------------------------------------------------------------------
+assign(paste0("caract",annee),caract)
+assign(paste0("vehic",annee),vehic)
+assign(paste0("usag",annee),usag)
+assign(paste0("lieux",annee),lieux)
+
+remove(list = c("caract","vehic","usag","lieux"))
 
 # Fonctions ---------------------------------------------------------------
 
