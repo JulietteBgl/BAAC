@@ -44,7 +44,9 @@ scale_fill_continuous <- function(...) scale_fill_viridis_c(..., option = "magma
 scale_fill_discrete <- function(...) scale_fill_manual(..., values = discrete_colors)
 
 # Importation des fichiers --------------------------------------------------------
+
 annee <- 2017
+
 
 caract <- read.csv(file = paste0("data/caracteristiques-",annee,".csv"), header = TRUE, sep = ",")
 vehic <- read.csv(file = paste0("data/vehicules-",annee,".csv"), header = TRUE, sep = ",")
