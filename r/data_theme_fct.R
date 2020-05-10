@@ -1,4 +1,14 @@
 # Librairires -------------------------------------------------------------
+
+install.packages("corrplot") # corrélation
+install.packages("ggplot2") # data visualisation
+install.packages("forcats") # factor manipulation
+install.packages("dplyr") # dataset manipulation
+install.packages("kableExtra") # create nice html tables
+install.packages("stringi") # string manipulation
+install.packages("patchwork") # combine plots
+
+
 library("corrplot") # corrélation
 library("ggplot2") # data visualisation
 library("forcats") # factor manipulation
@@ -34,7 +44,7 @@ scale_fill_continuous <- function(...) scale_fill_viridis_c(..., option = "magma
 scale_fill_discrete <- function(...) scale_fill_manual(..., values = discrete_colors)
 
 # Importation des fichiers --------------------------------------------------------
-annee <- 2018
+annee <- 2017
 
 caract <- read.csv(file = paste0("data/caracteristiques-",annee,".csv"), header = TRUE, sep = ",")
 vehic <- read.csv(file = paste0("data/vehicules-",annee,".csv"), header = TRUE, sep = ",")
@@ -114,11 +124,11 @@ usag <- usag %>%
 
 usag$equipement_secu <- factor(usag$equipement_secu, 
                                levels = c(1,2,3,4,9), 
-                               labels = c("Ceinture","Casque","Dispositif enfants","Equipement réfléchissant ","Autre"))
+                               labels = c("Ceinture","Casque","Dispositif enfants","Equipement réfléchissant ","Autre"))
 
 usag$utilisation_equipement_secu <- factor(usag$utilisation_equipement_secu, 
                                            levels = c(1,2,3), 
-                                           labels = c("Oui","Non","Non déterminable"))
+                                           labels = c("Oui","Non","Non déterminable"))
 
 usag$locp <- factor(usag$locp, levels = c(1,2,3,4,5,6,7,8), labels = c("Sur chaussée A + 50 m du passage piéton","Sur chaussée A – 50 m du passage piéton","Sur passage piéton Sans signalisation lumineuse","Sur passage piéton Avec signalisation lumineuse","Sur trottoir","Sur accotement","Sur refuge ou BAU","Sur contre allée"))
 
@@ -133,24 +143,24 @@ lieux$Num_Acc <- factor(lieux$Num_Acc)
 
 lieux$catr <- factor(lieux$catr, 
                      levels =  c(1,2,3,4,5,6,9), 
-                     labels = c("Autoroute","Route Nationale","Route Départementale","Voie Communale",
-                                "Hors réseau public","Parc de stationnement ouvert à la circulation publique","autre"))
+                     labels = c("Autoroute","Route Nationale","Route Départementale","Voie Communale",
+                                "Hors réseau public","Parc de stationnement ouvert à la circulation publique","autre"))
 
 lieux$circ <- factor(lieux$circ, 
                      levels =  1:4, 
-                     labels = c("A sens unique","Bidirectionnelle","A chaussées séparées","Avec voies d’affectation variable"))
+                     labels = c("A sens unique","Bidirectionnelle","A chaussées séparées","Avec voies d’affectation variable"))
 
 lieux$vosp <- factor(lieux$vosp, 
                      levels =  1:3, 
-                     labels = c("Piste cyclable","Banque cyclable","Voie réservée"))
+                     labels = c("Piste cyclable","Banque cyclable","Voie réservée"))
 
 lieux$prof <- factor(lieux$prof, 
                      levels =  1:4, 
-                     labels = c("Plat","Pente","Sommet de côte","Bas de côte"))
+                     labels = c("Plat","Pente","Sommet de côte","Bas de côte"))
 
 lieux$plan <- factor(lieux$plan, 
                      levels =  1:4, 
-                     labels = c("Partie rectiligne","En courbe à gauche","En courbe à̀ droite","En « S »"))
+                     labels = c("Partie rectiligne","En courbe à gauche","En courbe à̀ droite","En « S »"))
 
 
 lieux$surf <- factor(lieux$surf, 
@@ -159,7 +169,7 @@ lieux$surf <- factor(lieux$surf,
 
 lieux$infra <- factor(lieux$infra, 
                       levels =  1:7, 
-                      labels = c("Souterrain - tunnel","Pont - autopont","Bretelle d’échangeur ou de raccordement",
+                      labels = c("Souterrain - tunnel","Pont - autopont","Bretelle d’échangeur ou de raccordement",
                                  "Voie ferrée", "Carrefour aménagé", "Zone piétonne", "Zone de péage"))
 
 lieux$situ <- factor(lieux$situ, 
@@ -237,3 +247,94 @@ distr_quali <- function(data, variable, titre = "Titre du graphique", sort = TRU
   }
   return(plot)
 }
+
+
+####Export
+
+library(writexl) 
+
+write_xlsx(caract2017, "data/spss/caract2017.xlsx")
+write_xlsx(lieux2017, "data/spss/lieux2017.xlsx")
+write_xlsx(usag2017, "data/spss/usag2017.xlsx")
+write_xlsx(vehic2017, "data/spss/vehic2017.xlsx")
+
+# ###Fusion
+# 
+# 
+# bdd_complete_test<-merge(usag2017,caract2017,by="Num_Acc",all.x = TRUE, all.y = TRUE)
+# bdd_complete_test<-merge(bdd_complete_test,vehic2017,by="Num_Acc",all.x = TRUE, all.y = TRUE)
+# 
+# 
+# bdd_complete_test <- (usag2017 %>% full_join(caract2017, by ="Num_Acc") 
+#                                %>% inner_join(vehic2017, by ="Num_Acc")
+#                                %>% inner_join(usag2017, by ="Num_Acc"))
+# 
+# 
+# bdd_complete_test <- bdd_complete_test %>% left_join(vehic2017, by ="Num_Acc")
+
+# Typologies d'accidents - on ne garde que le blessé le plus grave par accident
+global_acc <- usag2017 %>% 
+  inner_join(caract2017) %>% 
+  mutate(grav = factor(grav, levels = c("Tué", "Blessé hospitalisé", "Blessé léger", "Indemne")),
+         int = if_else(int != "Hors intersection", "Intersection", "Hors intersection"),
+         zone = if_else(dep %in% c(75, 77, 78, 91, 92, 93, 94, 95), "IDF", "Province")
+  ) %>% 
+  arrange(Num_Acc, grav) %>% 
+  group_by(Num_Acc) %>% 
+  mutate(rank = seq(1:n())) %>% 
+  filter(rank == 1) %>% 
+  inner_join(vehic2017) %>% 
+  inner_join(lieux2017) %>% 
+  mutate(age = 2017 - an_nais,
+         groupe_age = case_when(
+           age <= 16 ~ "0-16",
+           age > 16 & age <=25 ~ "17-25",
+           age > 25 & age <=35 ~ "26-35",
+           age > 35 & age <=45 ~ "36-45",
+           age > 45 & age <=55 ~ "46-55",
+           age > 55 & age <=65 ~ "56-65",
+           age > 65 ~ "> 65"),
+         obs = if_else(!is.na(obs), "Obstacle", "Pas d'obstacle"),
+         plan = if_else(plan != "Partie rectiligne", "En courbe", "Partie rectiligne"),
+         catv = case_when(
+           catv %in% c("Tramway", "Autobus", "Train", "Autocar") ~ "Transport en commun",
+           stri_detect_fixed(catv, "Scooter") ~ "2 roues motorisé",
+           stri_detect_fixed(catv, "Motocyclette") ~ "2 roues motorisé",
+           catv == "Cyclomoteur < 50cm3" ~ "2 roues motorisé",
+           stri_detect_fixed(catv, "Tracteur") ~ "Tracteur",
+           stri_detect_fixed(catv, "PL") ~ "Engin spécial",
+           catv == "Engin spécial" ~ "Engin spécial",
+           stri_detect_fixed(catv, "Quad") ~ "Quad",
+           catv %in% c("VL seul", "Voiturette") ~ "Voiture",
+           stri_detect_fixed(catv, "VU") ~ "Véhicule utilitaire",
+           catv == "Bicyclette" ~ "Vélo",
+           catv == "Autre véhicule" ~ "Autre véhicule"),
+         prof = if_else(prof %in% c("Bas de côte", "Sommet de côte", "Pente"), "Pente", "Plat")
+  ) %>% 
+  filter(catv != 'Quad' &
+           !is.na(atm) &
+           !is.na(surf) &
+           !is.na(prof) &
+           !is.na(plan) &
+           !is.na(groupe_age) &
+           #focus sur les routes
+           catr %in% c("Autoroute", "Route Départementale", "Voie Communale", "Route Nationale")
+  ) %>% 
+  ungroup()
+
+###Freq des variables
+
+colors<-c("gray","lightgreen","darkred")
+pie(table(global_acc$sexe),col=colors,main="Répartition du sexe",
+    labels=round(table(global_acc$sexe)/nrow(global_acc),digits=3))
+legend("bottomleft", xpd = TRUE, legend = unique(global_acc$sexe),fill=colors)
+
+
+
+# verif<- usag2017 
+# 
+# sapply(verif, function(x) sum(!duplicated(x)))
+# # dplyr
+# caract2017 %>% summarise_all(funs(n_distinct))
+# # en combinant les deux :
+# sapply(caract2017, n_distinct)
