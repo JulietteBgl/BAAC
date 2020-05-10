@@ -260,19 +260,21 @@ write_xlsx(lieux2017, "data/spss/lieux2017.xlsx")
 write_xlsx(usag2017, "data/spss/usag2017.xlsx")
 write_xlsx(vehic2017, "data/spss/vehic2017.xlsx")
 
-# ###Fusion
-# 
-# 
-# bdd_complete_test<-merge(usag2017,caract2017,by="Num_Acc",all.x = TRUE, all.y = TRUE)
-# bdd_complete_test<-merge(bdd_complete_test,vehic2017,by="Num_Acc",all.x = TRUE, all.y = TRUE)
-# 
-# 
-# bdd_complete_test <- (usag2017 %>% full_join(caract2017, by ="Num_Acc") 
-#                                %>% inner_join(vehic2017, by ="Num_Acc")
-#                                %>% inner_join(usag2017, by ="Num_Acc"))
-# 
-# 
-# bdd_complete_test <- bdd_complete_test %>% left_join(vehic2017, by ="Num_Acc")
+
+###Fusion
+
+
+bdd_complete_test<-merge(usag2017,caract2017,by="Num_Acc",all.x = TRUE, all.y = TRUE)
+bdd_complete_test<-merge(bdd_complete_test,vehic2017,by="Num_Acc",all.x = TRUE, all.y = TRUE)
+
+
+bdd_complete_test <- (usag2017 %>% full_join(caract2017, by ="Num_Acc") 
+                               %>% inner_join(vehic2017, by ="Num_Acc")
+                               %>% inner_join(usag2017, by ="Num_Acc"))
+
+
+bdd_complete_test <- bdd_complete_test %>% left_join(vehic2017, by ="Num_Acc")
+
 
 # Typologies d'accidents - on ne garde que le blessé le plus grave par accident
 global_acc <- usag2017 %>% 
@@ -324,19 +326,7 @@ global_acc <- usag2017 %>%
   ) %>% 
   ungroup()
 
-###Freq des variables
-
-colors<-c("gray","lightgreen","darkred")
-pie(table(global_acc$sexe),col=colors,main="Répartition du sexe",
-    labels=round(table(global_acc$sexe)/nrow(global_acc),digits=3))
-legend("bottomleft", xpd = TRUE, legend = unique(global_acc$sexe),fill=colors)
 
 
 
-# verif<- usag2017 
-# 
-# sapply(verif, function(x) sum(!duplicated(x)))
-# # dplyr
-# caract2017 %>% summarise_all(funs(n_distinct))
-# # en combinant les deux :
-# sapply(caract2017, n_distinct)
+
