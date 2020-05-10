@@ -1,4 +1,14 @@
 # Librairires -------------------------------------------------------------
+
+install.packages("corrplot") # corrélation
+install.packages("ggplot2") # data visualisation
+install.packages("forcats") # factor manipulation
+install.packages("dplyr") # dataset manipulation
+install.packages("kableExtra") # create nice html tables
+install.packages("stringi") # string manipulation
+install.packages("patchwork") # combine plots
+
+
 library("corrplot") # corrélation
 library("ggplot2") # data visualisation
 library("forcats") # factor manipulation
