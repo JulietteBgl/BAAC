@@ -97,15 +97,6 @@ global_ind <- usag %>%
            catv == "Bicyclette" ~ "Vélo",
            catv == "Autre véhicule" ~ "Autre véhicule"),
          prof = if_else(prof %in% c("Bas de côte", "Sommet de côte", "Pente"), "Pente", "Plat")
-  ) %>% 
-  filter(catv != 'Quad' &
-           !is.na(atm) &
-           !is.na(surf) &
-           !is.na(prof) &
-           !is.na(plan) &
-           !is.na(groupe_age) &
-           #focus sur les routes
-           catr %in% c("Autoroute", "Route Départementale", "Voie Communale", "Route Nationale")
   ) 
 
 # write csv
