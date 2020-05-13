@@ -5,7 +5,7 @@ library("stringi") # string manipulation
 # Caractéristiques --------------------------------------------------------
 
 # Import du fichier
-caract <- read.csv(file = "data/caracteristiques-2018.csv", header = TRUE, sep = ",")
+caract <- read.csv(file = "data/2017/caracteristiques-2017.csv", header = TRUE, sep = ",")
 
 # Remplacer les "\xe9" par des é (sinon bug encodage UTF8)
 caract <- caract %>% 
@@ -41,7 +41,7 @@ caract$gps <- factor(caract$gps, levels = c("M","A","G","R","Y"), labels = c("M�
 # Véhicules ---------------------------------------------------------------
 
 # Import du fichier
-vehic <- read.csv(file = "data/vehicules-2018.csv", header = TRUE, sep = ",")
+vehic <- read.csv(file = "data/2017/vehicules-2017.csv", header = TRUE, sep = ",")
 
 # Transformation des variables quantitatives en facteur
 vehic$Num_Acc <- factor(vehic$Num_Acc)
@@ -61,7 +61,7 @@ vehic$manv <- factor(vehic$manv, levels =  c(1,2,3,4,5,6,7,8,9,10,11,12,13,14,15
 # Usagers -----------------------------------------------------------------
 
 # Import du fichier
-usag <- read.csv(file = "data/usagers-2018.csv", header = TRUE, sep = ",")
+usag <- read.csv(file = "data/2017/usagers-2017.csv", header = TRUE, sep = ",")
 
 # Transformation des variables quantitatives en facteur
 usag$Num_Acc <- factor(usag$Num_Acc)
@@ -99,7 +99,7 @@ usag$etatp <- factor(usag$etatp, levels = c(1,2,3), labels = c("Seul","Accompagn
 # Lieux -------------------------------------------------------------------
 
 # Import du fichier
-lieux <- read.csv(file = "data/lieux-2018.csv", header = TRUE, sep = ",")
+lieux <- read.csv(file = "data/2017/lieux-2017.csv", header = TRUE, sep = ",")
 
 # Transformation des variables quantitatives en facteur
 lieux$Num_Acc <- factor(lieux$Num_Acc)
@@ -141,3 +141,4 @@ lieux$situ <- factor(lieux$situ,
                                 "Sur trottoir", "Sur piste cyclable"))
 
 rm(equipement_secu, utilisation_equipement_secu)
+
