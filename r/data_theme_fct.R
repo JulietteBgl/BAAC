@@ -327,8 +327,7 @@ global_acc <- usag2017 %>%
 
 library(ggplot2)
 
-#Sexe
-
+##########Sexe######
 
 
 #----------------nbr et freq
