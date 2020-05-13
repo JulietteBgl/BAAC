@@ -328,7 +328,6 @@ global_acc <- usag2017 %>%
 
 
 
-
 #----------------nbr et freq
 table(global_acc$sexe)
 prop.table(table(global_acc$sexe))
