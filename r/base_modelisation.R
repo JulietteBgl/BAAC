@@ -140,16 +140,19 @@ global_ind <- usag %>%
                        "autre"),
            yes = "Autre",
            no = as.character(catr)
-         )
-         ) %>% 
-  select(-circ, -catv, -atm, -col, -catr)
+         )) %>% 
+   filter(gps == "Métropole") %>% 
+  select(-place, 
+         -locp, -actp, -etatp, -an_nais, -num_veh, -equipement_secu, -senc, -occutc, -obs, -obsm, -manv,
+         -voie, -v1, -v2, -pr, -pr1, -vosp, -lartpc, -larrout, -infra, -situ, -env1, -an, -mois, -jour, -hrmn, -com, 
+         -adr, -gps, -circ, -catv, -atm, -col, -catr) 
            
          
 dim(global_ind)
 summary(global_ind)
 
 # write csv
-write.csv(global_ind, "outputs/individus_2017_alldata.csv")
+write.csv(global_ind, "outputs/individus_2017_alldata.csv", row.names = F)
 
 # check csv
 test <- read.csv("outputs/individus_2017_alldata.csv")
