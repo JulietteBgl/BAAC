@@ -88,7 +88,7 @@ usag$equipement_secu <- factor(usag$equipement_secu,
 
 usag$utilisation_equipement_secu <- factor(usag$utilisation_equipement_secu, 
                                            levels = c(1,2,3), 
-                                           labels = c("Oui","Non","Non déterminable"))
+                                           labels = c("Utilisation sécu","Non utilisation sécu","Non déterminable"))
 
 usag$locp <- factor(usag$locp, levels = c(1,2,3,4,5,6,7,8), labels = c("Sur chaussée A + 50 m du passage piéton","Sur chaussée A – 50 m du passage piéton","Sur passage piéton Sans signalisation lumineuse","Sur passage piéton Avec signalisation lumineuse","Sur trottoir","Sur accotement","Sur refuge ou BAU","Sur contre allée"))
 
