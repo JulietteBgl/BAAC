@@ -20,6 +20,11 @@ library("Factoshiny") # ACM Intérface API
 
 individus_2017_alldata <- read.csv(file ="data/individus_2017_alldata.csv", header = TRUE, sep = ",",encoding="UTF-8")
 
+#eviter la numérotation exponentiel des ID
+individus_2017_alldata[, 1]  <- as.numeric(individus_2017_alldata[, 1])
+options(scipen=999)
+# Pour revenir à l'option : options(scipen=999)
+
 #------------------------------------------Selection des données pour ACM
 
 
@@ -77,6 +82,10 @@ dimdesc(res.mca)
 
 coord<-as.data.frame(res.mca$ind$coord[,1:11])
 global_acc_f<-cbind(global_acc_f,coord)
+
+
+#------------------------------------------CAH
+
 
 
 
