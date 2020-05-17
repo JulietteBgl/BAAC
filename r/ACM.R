@@ -71,7 +71,7 @@ plot(res.mca, invisible = c("var","quali.sup"),habillage="grav")
 
 #------------------------------------------Tableau d'inertie
 
-summary.MCA(res.mca,ncp=5,nbelements = Inf)
+summary.MCA(res.mca,ncp=Inf,nbelements = Inf)
 
 res.mca$var$contrib
 
@@ -80,15 +80,43 @@ dimdesc(res.mca)
 
 #------------------------------------------Tableau d'inertieRécupération des coordonnées
 
-coord<-as.data.frame(res.mca$ind$coord[,1:11])
+coord<-as.data.frame(res.mca$ind$coord[,1:5])
 global_acc_f<-cbind(global_acc_f,coord)
 
 
 #------------------------------------------CAH
 
+###CAH via ACM
+
+global_acc_f2<-sample(global_acc_f,10)
+global_acc_f2<-global_acc_f[sample(nrow(global_acc_f), 1000), ]
+
+res.mca_cah<-MCA(global_acc_f[,2:ncol(global_acc_f)],quali.sup=1,graph=T,na.method="average",ncp=10)
+res.cah<-HCPC(res.mca_cah,consol = F,max = 5)
+
+
+#global_acc_f<-select(individus_2017_alldata,Num_Acc,grav,sexe,groupe_age,catu,trajet,utilisation_equipement_secu,choc,prof,plan,surf,lum,agg,int,zone,cat_vehic,meteo,collision,cat_route)
+res.mca_cah<-MCA(global_acc_f[,2:ncol(global_acc_f)],quali.sup=1,graph=T,na.method="average",ncp=13)
+res.cah<-HCPC(res.mca_cah,consol = F,max = 5)
+
+length(global_acc_f$grav)
+
+sapply(global_acc_f, length)
+
+
+global_acc_f2<-select(individus_2017_alldata,grav,sexe,groupe_age)
+
+global_acc_f2=global_acc_f2[1:1000,]
+
+res.mca_cah<-MCA(global_acc_f2,graph=T,na.method="average",ncp=10)
+res.cah<-HCPC(res.mca_cah,consol = F,max = 5)
 
 
 
+
+library(ade4)
+res.mca_cah <- dudi.acm(global_acc_f2[,2:ncol(global_acc_f2)], scannf = FALSE, nf = 5)
+md <- dist.dudi(res.mca_cah)
 
 #------------------------------------------Poubelle
 
