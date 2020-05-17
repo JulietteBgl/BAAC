@@ -1,7 +1,8 @@
 
 # Setup -------------------------------------------------------------------
 
-source("r/data.R")
+source("r/data_2017_training.R")
+library("tidylog") # provide feedback about dplyr operations
 
 # Version 1 ---------------------------------------------------------------
 
