@@ -88,7 +88,7 @@ global_acc_f<-cbind(global_acc_f,coord)
 
 ###CAH via ACM
 
-global_acc_f2<-sample(global_acc_f,10)
+
 global_acc_f2<-global_acc_f[sample(nrow(global_acc_f), 7000), ]
 
 res.mca_cah<-MCA(global_acc_f2[,2:ncol(global_acc_f2)],quali.sup=1,graph=F,na.method="average",ncp=10)
