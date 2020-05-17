@@ -51,6 +51,7 @@ scale_fill_discrete <- function(...) scale_fill_manual(..., values = discrete_co
 
 # Importation des fichiers --------------------------------------------------------
 
+
 annee <- 2017
 
 
@@ -333,7 +334,6 @@ global_acc <- usag2017 %>%
   ungroup()
 
 
-
 #----------------nbr et freq
 
 table(global_acc$sexe)
@@ -569,4 +569,3 @@ global_acc_f<-cbind(global_acc_f,coord)
 # caract2017 %>% summarise_all(funs(n_distinct))
 # # en combinant les deux :
 # sapply(caract2017, n_distinct)
-

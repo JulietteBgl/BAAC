@@ -1,4 +1,5 @@
 
+
 # Set-up ------------------------------------------------------------------
 
 source("r/data.R")
@@ -330,6 +331,7 @@ test <- acm$var$contrib
 plot(acm, 
      invisible = 'ind')
 
+
 #------------------------------------------Libraries
 
 install.packages("corrplot") # corrélation
@@ -417,7 +419,6 @@ global_acc_f<-cbind(global_acc_f,coord)
 
 
 
-
 #------------------------------------------Poubelle
 
 
@@ -448,4 +449,3 @@ global_acc_f<-cbind(global_acc_f,coord)
 # caract2017 %>% summarise_all(funs(n_distinct))
 # # en combinant les deux :
 # sapply(caract2017, n_distinct)
-
