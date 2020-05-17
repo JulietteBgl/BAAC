@@ -1,16 +1,88 @@
 # Préparation de la base globale
+library(tidyverse)
 
-sapply(global_ind, function(x) sum(is.na(x)))
-sapply(global_ind, function(x) sum(is.na(x))/nrow(global_ind)*100)
-str(global_ind)
+# Remplacement des NA
+sapply(global_ind, function(x) sum(is.na(x))) # Nombre de NA par variable
+sapply(global_ind, function(x) sum(is.na(x))/nrow(global_ind)*100) #Proportion de NA par variable
+
+    # Remplacement des NA Pour la variable Trajet : On créé une modalité Inconnu
+global_ind$trajet[is.na(global_ind$trajet)] <- "Inconnu" # On créé une modalité Inconnu
+
+  # Remplacement des NA Pour la variable utilisation_equipement_secu : SI NA sur Passager et Conducteur, on passe à Non déterminable
 table(global_ind$catu, global_ind$utilisation_equipement_secu, useNA = "always")
+
+global_ind <- global_ind %>%
+      mutate(
+        utilisation_equipement_secu = ifelse(catu %in% c("Conducteur","Passager") & is.na(utilisation_equipement_secu), 
+                    yes = "Non de´terminable", 
+                    no = as.character(utilisation_equipement_secu))
+            )
+table(global_ind$catu, global_ind$utilisation_equipement_secu, useNA = "always")
+
+  # Remplacement des NA Pour la variable utilisation_equipement_secu : Il reste les pietons : on supprimera la donnée après dichotomisation (car idem Pieton)
+global_ind$utilisation_equipement_secu[is.na(global_ind$utilisation_equipement_secu)] <- "SecuPietonASupprimer" # On créé une modalité Inconnu
+
+table(global_ind$catu, global_ind$utilisation_equipement_secu, useNA = "always")
+
+  # Remplacement des NA Pour la variable choc : On créé une modalité Inconnu
+global_ind$choc[is.na(global_ind$choc)] <- "Inconnu" # On créé une modalité Inconnu
+
+  # Remplacement des NA Pour la variable Plan : On créé une modalité Inconnu
+global_ind$plan[is.na(global_ind$plan)] <- "Inconnu" # On créé une modalité Inconnu
+
+  # Remplacement des NA pour la moyenne (Variable quanti) ou Mode (Variable Quali) par Groupe
+Mode <- function(x) {
+  ux <- unique(x)
+  ux[which.max(tabulate(match(x, ux)))]
+}
+
+library(zoo)
+
+global_ind <- global_ind  %>%
+  group_by(catu, sexe) %>%
+    mutate(
+          age = na.aggregate(age, FUN=mean)
+          ) %>%
+  ungroup() %>%
+  
+  group_by(cat_route, agg) %>%
+  mutate(
+    nbv = na.aggregate(nbv, FUN=mean)
+  ) %>%
+  ungroup() %>%
+  
+  group_by(cat_route, agg) %>%
+    mutate(
+          prof = na.aggregate(prof, FUN=Mode),
+          int = na.aggregate(int, FUN=Mode)
+           ) %>%
+  ungroup() %>%
+
+  group_by(cat_route, agg, catu) %>%
+  mutate(
+    collision = na.aggregate(collision, FUN=Mode)
+  ) %>%
+  ungroup() %>%
+
+  group_by(surf) %>%
+  mutate(
+    meteo = na.aggregate(meteo, FUN=Mode)
+  ) %>%
+  ungroup() %>%
+
+  group_by(meteo) %>%
+  mutate(
+    surf = na.aggregate(surf, FUN=Mode)
+  ) %>%
+  ungroup() 
+
+# FIN du remplacement des NA
+str(global_ind)
+
 dataflo <- global_ind %>% 
         select(-Num_Acc, -lat, -long, -groupe_age, -dep)
 
 summary(dataflo)
-
-table(global_ind$plan)
-
 table(dataflo$grav)
 
 # Transformer les variables Quali en variables Quanti 
@@ -23,9 +95,11 @@ dataflo_dichoto$"grav" <- ifelse(dataflo_dichoto$"grav.Indemne" == 1, "Indemne",
                           ifelse(dataflo_dichoto$"grav.Blessé hospitalisé" == 1, "Blessé hospitalisé", 
                           "Blessé léger"))) # Revenir à Grav initiale
 table(dataflo_dichoto$grav)
+
 # On supprime les colonnes inutiles
+str(dataflo_dichoto)
 dataflo_dichoto <- dataflo_dichoto %>% 
-      select(-"grav.Indemne", -"grav.Tué", -"grav.Blessé hospitalisé", -"grav.Blessé léger")
+      select(-"grav.Indemne", -"grav.Tué", -"grav.Blessé hospitalisé", -"grav.Blessé léger", -"utilisation_equipement_secuSecuPietonASupprimer")
 
 dataflo_dichoto$grav <- as.factor(dataflo_dichoto$grav)
 
