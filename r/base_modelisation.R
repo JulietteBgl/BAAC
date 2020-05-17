@@ -2,6 +2,7 @@
 # Setup -------------------------------------------------------------------
 
 source("r/data.R")
+library("tidylog") # provide feedback about dplyr operations
 
 # Version 1 ---------------------------------------------------------------
 
