@@ -83,7 +83,8 @@ map_data <- merge(
 map_data <- map_data %>% 
   mutate(tx = round(n/Population*1000,2),
          text = paste0(Département, "\n", "Nombre d'accidents pour 1000 habitant :", tx)
-         )
+         ) %>% 
+  filter(dep != 97)
   
 # map
 map <- ggplot(data = map_data) +
@@ -456,7 +457,86 @@ day_grav %>%
 
 ## Piéton : quels sont les plus grosses sources de danger pour les piétons ?
 
-Test
+```{r, out.width="100%"}
+usag %>% 
+  mutate(grav = factor(grav, levels = c("Tué", "Blessé hospitalisé", "Blessé léger", "Indemne"))
+         ) %>% 
+  filter(catu == "Piéton") %>% 
+  group_by(locp, grav) %>% 
+  summarise(nb_accidents = n()) %>% 
+  ggplot(aes(x = fct_reorder(locp, nb_accidents), y = nb_accidents, fill = grav)) +
+  geom_bar(position = "fill", stat = "identity") +
+  coord_flip() +
+  labs(
+    title = "Distribution de la gravité en fonction\n de la localisation du piéton",
+    x = "",
+    y = "",
+    fill = ""
+  ) +
+  scale_fill_manual(values = c("Tué" = "#660000",
+                                         "Blessé hospitalisé" = "darkblue", 
+                                         "Blessé léger" = "darkgreen", 
+                                         "Indemne" = "lightblue")) +
+  theme(
+    axis.ticks = element_blank(),
+    axis.text.x = element_blank(),
+    legend.position = "bottom",
+    axis.text.y = element_text(angle = 30)
+  )
+```
 
+```{r, out.width="100%"}
+usag %>% 
+  mutate(grav = factor(grav, levels = c("Tué", "Blessé hospitalisé", "Blessé léger", "Indemne"))
+         ) %>% 
+  filter(catu == "Piéton") %>% 
+  group_by(actp, grav) %>% 
+  summarise(nb_accidents = n()) %>% 
+  ggplot(aes(x = fct_reorder(actp, nb_accidents), y = nb_accidents, fill = grav)) +
+  geom_bar(position = "fill", stat = "identity") +
+  coord_flip() +
+  labs(
+    title = "Distribution de la gravité en fonction\n de l'action du piéton",
+    x = "",
+    y = "",
+    fill = ""
+  ) +
+  scale_fill_manual(values = c("Tué" = "#660000",
+                                         "Blessé hospitalisé" = "darkblue", 
+                                         "Blessé léger" = "darkgreen", 
+                                         "Indemne" = "lightblue")) +
+  theme(
+    axis.ticks = element_blank(),
+    axis.text.x = element_blank(),
+    legend.position = "bottom",
+    axis.text.y = element_text(angle = 30)
+  )
+```
 
-
+```{r, out.width="100%"}
+usag %>% 
+  mutate(grav = factor(grav, levels = c("Tué", "Blessé hospitalisé", "Blessé léger", "Indemne"))
+         ) %>% 
+  filter(catu == "Piéton") %>% 
+  group_by(etatp, grav) %>% 
+  summarise(nb_accidents = n()) %>% 
+  ggplot(aes(x = fct_reorder(etatp, nb_accidents), y = nb_accidents, fill = grav)) +
+  geom_bar(position = "fill", stat = "identity") +
+  coord_flip() +
+  labs(
+    title = "Distribution de la gravité en fonction\n de l'accompagnement du piéton",
+    x = "",
+    y = "",
+    fill = ""
+  ) +
+  scale_fill_manual(values = c("Tué" = "#660000",
+                                         "Blessé hospitalisé" = "darkblue", 
+                                         "Blessé léger" = "darkgreen", 
+                                         "Indemne" = "lightblue")) +
+  theme(
+    axis.ticks = element_blank(),
+    axis.text.x = element_blank(),
+    legend.position = "bottom",
+    axis.text.y = element_text(angle = 30)
+  )
+```
