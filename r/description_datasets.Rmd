@@ -311,16 +311,16 @@ grav <- distr_quali(data = usag, variable = grav, titre = "Gravité de l'acciden
 sexe <- distr_quali(data = usag, variable = sexe, titre = "Sexe de l'usager")
 
 # Motif du déplacement
-trajet <- distr_quali(data = usag, variable = trajet, titre = "Motif du déplacement")
+trajet <- distr_quali(data = usag %>% filter(catu == "Piéton"), variable = trajet, titre = "Motif du déplacement")
 
 # Localisation du piéton
-locp <- distr_quali(data = usag, variable = locp, titre = "Localisation du piéton")
+locp <- distr_quali(data = usag %>% filter(catu == "Piéton"), variable = locp, titre = "Localisation du piéton")
 
 # Action du piéton
-actp <- distr_quali(data = usag, variable = actp, titre = "Action du piéton")
+actp <- distr_quali(data = usag %>% filter(catu == "Piéton"), variable = actp, titre = "Action du piéton")
 
 # Accompagnement du piéton
-etatp <- distr_quali(data = usag, variable = etatp, titre = "Accompagnement du piéton")
+etatp <- distr_quali(data = usag%>% filter(catu == "Piéton"), variable = etatp, titre = "Accompagnement du piéton")
 
 # Présence équipement sécurité
 equipement_secu <- distr_quali(data = usag, variable = equipement_secu, titre = "Présence d'un équipement de sécurité")
