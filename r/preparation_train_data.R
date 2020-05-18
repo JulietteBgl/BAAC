@@ -1,10 +1,67 @@
 
 # Setup -------------------------------------------------------------------
 
-source("r/data_recode_2018_test.R")
+source("r/data_recode_2017_training.R")
 library("tidylog") # provide feedback about dplyr operations
 
-# Par individus -----------------------------------------------------------
+# Version 1 ---------------------------------------------------------------
+
+# par accidents
+# on ne garde que le blessé le plus grave par accident
+
+global_acc <- usag %>% 
+  inner_join(caract) %>% 
+  mutate(grav = factor(grav, levels = c("Tué", "Blessé hospitalisé", "Blessé léger", "Indemne")), #pas de na
+         int = if_else(int != "Hors intersection", "Intersection", "Hors intersection"),
+         zone = if_else(dep %in% c(75, 77, 78, 91, 92, 93, 94, 95), "IDF", "Province")
+  ) %>% 
+  arrange(Num_Acc, grav) %>% 
+  group_by(Num_Acc) %>% 
+  mutate(nb_pers_impliquées = n()) %>% 
+  mutate(rank = seq(1:n())) %>% 
+  filter(rank == 1) %>% 
+  rename(max_grav = grav) %>% 
+  inner_join(vehic) %>% 
+  inner_join(lieux) %>% 
+  mutate(age = 2017 - an_nais,
+         groupe_age = case_when(
+           age <= 16 ~ "0-16",
+           age > 16 & age <=25 ~ "17-25",
+           age > 25 & age <=35 ~ "26-35",
+           age > 35 & age <=45 ~ "36-45",
+           age > 45 & age <=55 ~ "46-55",
+           age > 55 & age <=65 ~ "56-65",
+           age > 65 ~ "> 65"),
+         obs = if_else(!is.na(obs), "Obstacle", "Pas d'obstacle"),
+         plan = ifelse(plan != "Partie rectiligne" & !is.na(plan), 
+                        yes = "En courbe", 
+                        no = as.character(plan)
+                        ), 
+         catv = case_when(
+           catv %in% c("Tramway", "Autobus", "Train", "Autocar") ~ "Transport en commun",
+           stri_detect_fixed(catv, "Scooter") ~ "2 roues motorisé",
+           stri_detect_fixed(catv, "Motocyclette") ~ "2 roues motorisé",
+           catv == "Cyclomoteur < 50cm3" ~ "2 roues motorisé",
+           stri_detect_fixed(catv, "Tracteur") ~ "Tracteur",
+           stri_detect_fixed(catv, "PL") ~ "Engin spécial",
+           catv == "Engin spécial" ~ "Engin spécial",
+           stri_detect_fixed(catv, "Quad") ~ "Quad",
+           catv %in% c("VL seul", "Voiturette") ~ "Voiture",
+           stri_detect_fixed(catv, "VU") ~ "Véhicule utilitaire",
+           catv == "Bicyclette" ~ "Vélo",
+           catv == "Autre véhicule" ~ "Autre véhicule"),
+         prof = ifelse(prof != "Plat" & !is.na(prof), 
+                        yes = "Pente", 
+                        no = as.character(prof)) 
+  ) %>% 
+  select(-rank)
+
+# write csv
+write.csv(global_acc, "outputs/accidents_2017_alldata.csv")
+
+# Version 2 ---------------------------------------------------------------
+
+# par individus
 
 global_ind <- usag %>% 
   left_join(vehic) %>% 
@@ -15,7 +72,7 @@ global_ind <- usag %>%
   ungroup() %>% 
   mutate(int = if_else(int != "Hors intersection", true = "Intersection", false = "Hors intersection"), #pas de na
          zone = if_else(dep %in% c(75, 77, 78, 91, 92, 93, 94, 95), "IDF", "Province"),
-         age = 2018 - an_nais,
+         age = 2017 - an_nais,
          groupe_age = case_when(
            age <= 16 ~ "0-16",
            age > 16 & age <=21 ~ "17-21",
@@ -104,9 +161,9 @@ dim(global_ind)
 summary(global_ind)
 
 # write csv
-write.csv(global_ind, "outputs/individus_2018_testdata.csv", row.names = F)
+write.csv(global_ind, "outputs/individus_2017_alldata.csv", row.names = F)
 
 # check csv
-test <- read.csv("outputs/individus_2018_testdata.csv")
+test <- read.csv("outputs/individus_2017_alldata.csv")
 
 
