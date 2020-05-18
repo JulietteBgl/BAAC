@@ -1,6 +1,14 @@
+# History files
+.Rhistory
+.Rapp.history
 
+# Session Data files
+.RData
+.Rproj.user
+
+# Remove mac OS Icon
 Icon?
 
+# No need to  follow the raw data file
 data/
-.Rproj.user
-.Rhistory
+
