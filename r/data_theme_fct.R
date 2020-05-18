@@ -1,17 +1,4 @@
-# Librairires -------------------------------------------------------------
-
-install.packages("corrplot") # corrélation
-install.packages("ggplot2") # data visualisation
-install.packages("forcats") # factor manipulation
-install.packages("dplyr") # dataset manipulation
-install.packages("kableExtra") # create nice html tables
-install.packages("stringi") # string manipulation
-install.packages("patchwork") # combine plots
-install.packages("DataExplorer") # explorateur de données
-install.packages("FactoMineR")# factorisation
-install.packages("Factoshiny")# ACM Intérface API
-
-
+# Librairies --------------------------------------------------------------
 
 library("corrplot") # corrélation
 library("ggplot2") # data visualisation
@@ -35,7 +22,6 @@ theme_set(
       panel.border = element_blank(),
       axis.line = element_line(colour = "gray50", size = .5),
       axis.ticks = element_blank(),
-      #axis.title.y = element_text(angle = 0),
       strip.background = element_rect(colour = "gray50", fill = "transparent", size = .7),
       strip.text.x = element_text(colour = "gray10"),
       legend.key.size = unit(2, "cm")
@@ -51,14 +37,12 @@ scale_fill_discrete <- function(...) scale_fill_manual(..., values = discrete_co
 
 # Importation des fichiers --------------------------------------------------------
 
-
 annee <- 2017
 
-
-caract <- read.csv(file = paste0("data/caracteristiques-",annee,".csv"), header = TRUE, sep = ",")
-vehic <- read.csv(file = paste0("data/vehicules-",annee,".csv"), header = TRUE, sep = ",")
-usag <- read.csv(file = paste0("data/usagers-",annee,".csv"), header = TRUE, sep = ",")
-lieux <- read.csv(file = paste0("data/lieux-",annee,".csv"), header = TRUE, sep = ",")
+caract <- read.csv(file = paste0("../data/2017/caracteristiques-", annee,".csv"), header = TRUE, sep = ",")
+vehic <- read.csv(file = paste0("../data/2017/vehicules-", annee,".csv"), header = TRUE, sep = ",")
+usag <- read.csv(file = paste0("../data/2017/usagers-", annee,".csv"), header = TRUE, sep = ",")
+lieux <- read.csv(file = paste0("../data/2017/lieux-", annee,".csv"), header = TRUE, sep = ",")
 
 # Caractéristiques --------------------------------------------------------
 
@@ -187,12 +171,12 @@ lieux$situ <- factor(lieux$situ,
                                 "Sur trottoir", "Sur piste cyclable"))
 
 # Réattribution dans les bons objets  -------------------------------------------------------------------
-assign(paste0("caract",annee),caract)
-assign(paste0("vehic",annee),vehic)
-assign(paste0("usag",annee),usag)
-assign(paste0("lieux",annee),lieux)
-
-remove(list = c("caract","vehic","usag","lieux"))
+# assign(paste0("caract",annee),caract)
+# assign(paste0("vehic",annee),vehic)
+# assign(paste0("usag",annee),usag)
+# assign(paste0("lieux",annee),lieux)
+# 
+# remove(list = c("caract","vehic","usag","lieux"))
 
 # Fonctions ---------------------------------------------------------------
 
@@ -222,7 +206,6 @@ distr_quali <- function(data, variable, titre = "Titre du graphique", sort = TRU
   
   if (sort == TRUE) {
     plot <- data %>%
-      # mutate(!!variable = fct_explicit_na(!!variable)) %>%
       group_by(!!variable) %>%
       summarise(n = n()) %>%
       ggplot(aes(x = fct_reorder(!!variable, n, .desc = T), y = n)) +
@@ -239,7 +222,6 @@ distr_quali <- function(data, variable, titre = "Titre du graphique", sort = TRU
   
   if (sort == FALSE) {
     plot <- data %>%
-      # mutate(!!variable = fct_explicit_na(!!variable)) %>%
       group_by(!!variable) %>%
       summarise(n = n()) %>%
       ggplot(aes(x = !!variable, y = n)) +
@@ -256,316 +238,3 @@ distr_quali <- function(data, variable, titre = "Titre du graphique", sort = TRU
   }
   return(plot)
 }
-
-
-####Export
-
-library(writexl) 
-
-write_xlsx(caract2017, "data/spss/caract2017.xlsx")
-write_xlsx(lieux2017, "data/spss/lieux2017.xlsx")
-write_xlsx(usag2017, "data/spss/usag2017.xlsx")
-write_xlsx(vehic2017, "data/spss/vehic2017.xlsx")
-
-
-###Fusion
-
-
-# bdd_complete_test<-merge(usag2017,caract2017,by="Num_Acc",all.x = TRUE, all.y = TRUE)
-# bdd_complete_test<-merge(bdd_complete_test,vehic2017,by="Num_Acc",all.x = TRUE, all.y = TRUE)
-# 
-# 
-# bdd_complete_test <- (usag2017 %>% full_join(caract2017, by ="Num_Acc") 
-#                                %>% inner_join(vehic2017, by ="Num_Acc")
-#                                %>% inner_join(usag2017, by ="Num_Acc"))
-# 
-# 
-# bdd_complete_test <- bdd_complete_test %>% left_join(vehic2017, by ="Num_Acc")
-
-
-# Typologies d'accidents - on ne garde que le blessé le plus grave par accident
-global_acc <- usag2017 %>% 
-  inner_join(caract2017) %>% 
-  mutate(grav = factor(grav, levels = c("Tué", "Blessé hospitalisé", "Blessé léger", "Indemne")),
-         int = if_else(int != "Hors intersection", "Intersection", "Hors intersection"),
-         zone = if_else(dep %in% c(75, 77, 78, 91, 92, 93, 94, 95), "IDF", "Province")
-  ) %>% 
-  arrange(Num_Acc, grav) %>% 
-  group_by(Num_Acc) %>% 
-  mutate(rank = seq(1:n())) %>% 
-  filter(rank == 1) %>% 
-  inner_join(vehic2017) %>% 
-  inner_join(lieux2017) %>% 
-  mutate(age = 2017 - an_nais,
-         groupe_age = case_when(
-           age <= 16 ~ "0-16",
-           age > 16 & age <=25 ~ "17-25",
-           age > 25 & age <=35 ~ "26-35",
-           age > 35 & age <=45 ~ "36-45",
-           age > 45 & age <=55 ~ "46-55",
-           age > 55 & age <=65 ~ "56-65",
-           age > 65 ~ "> 65"),
-         obs = if_else(!is.na(obs), "Obstacle", "Pas d'obstacle"),
-         plan = if_else(plan != "Partie rectiligne", "En courbe", "Partie rectiligne"),
-         catv = case_when(
-           catv %in% c("Tramway", "Autobus", "Train", "Autocar") ~ "Transport en commun",
-           stri_detect_fixed(catv, "Scooter") ~ "2 roues motorisé",
-           stri_detect_fixed(catv, "Motocyclette") ~ "2 roues motorisé",
-           catv == "Cyclomoteur < 50cm3" ~ "2 roues motorisé",
-           stri_detect_fixed(catv, "Tracteur") ~ "Tracteur",
-           stri_detect_fixed(catv, "PL") ~ "Engin spécial",
-           catv == "Engin spécial" ~ "Engin spécial",
-           stri_detect_fixed(catv, "Quad") ~ "Quad",
-           catv %in% c("VL seul", "Voiturette") ~ "Voiture",
-           stri_detect_fixed(catv, "VU") ~ "Véhicule utilitaire",
-           catv == "Bicyclette" ~ "Vélo",
-           catv == "Autre véhicule" ~ "Autre véhicule"),
-         prof = if_else(prof %in% c("Bas de côte", "Sommet de côte", "Pente"), "Pente", "Plat")
-  ) %>% 
-  filter(catv != 'Quad' &
-           !is.na(atm) &
-           !is.na(surf) &
-           !is.na(prof) &
-           !is.na(plan) &
-           !is.na(groupe_age) &
-           #focus sur les routes
-           catr %in% c("Autoroute", "Route Départementale", "Voie Communale", "Route Nationale")
-  ) %>% 
-  ungroup()
-
-
-#----------------nbr et freq
-
-table(global_acc$sexe)
-prop.table(table(global_acc$sexe))
-
-
-#---------------pie ensemble
-colors<-c("blue","red","darkred")
-pie(table(global_acc$sexe),col=colors,main="Répartition sexe",
-    labels=round(table(global_acc$sexe)/nrow(global_acc)*100,digits=3))
-legend("bottomleft", xpd = TRUE, legend = unique(global_acc$sexe),fill=colors)
-
-
-# ggplot(global_acc) +
-#   aes(x = sexe,stat="count") +
-#   geom_histogram(fill ="orange", colour = "black", binwidth = 2) +
-#   ggtitle("Répartition sexe") +
-#   xlab("sexe") +
-#   ylab("Effectifs")
-
-#---------------Diagramme ensemble
-ggplot(global_acc, aes(x = sexe , fill =sexe )) + 
-  geom_bar(aes(y = ..count../sum(..count..))) +
-  scale_y_continuous(labels=scales::percent) +
-  ggtitle("Répartition") +
-  # xlab(" ") + 
-  ylab("Proportion")
-
-# ggplot(global_acc, aes(x= grav,  group=sexe)) + 
-#   geom_bar(aes(y = ..prop.., fill = factor(..x..)), stat="count") +
-#   geom_text(aes( label = scales::percent(..prop..),
-#                  y= ..prop.. ), stat= "count", vjust = -2) +
-#   labs(y = "Proportion", fill="Gravité") +
-#   facet_grid(~sexe) +
-#   scale_y_continuous(labels = scales::percent)
-
-#---------------Diagramme par gravité
-
-ggplot(global_acc, aes(x=sexe,  group=grav)) + 
-  geom_bar(aes(y = ..prop.., fill = factor(..x..)), stat="count") +
-  geom_text(aes( label = scales::percent(..prop..),
-                 y= ..prop.. ), stat= "count", vjust = 1) +
-  labs(y = "Proportion", fill="mod") +
-  facet_grid(~grav) +
-  scale_y_continuous(labels = scales::percent)
-
-# verif<- usag2017 
-# 
-sapply(global_acc, function(x) sum(!duplicated(x)))
-
-
-
-library(DataExplorer)
-
-create_report(global_acc)
-
-plot_intro(global_acc)
-plot_bar(global_acc$trajet)
-
-
-global_acc %>%
-  ggplot(aes(grav)) +
-  geom_bar(aes(fill = sexe))
-
-#recode variables
-
-table(global_acc$secu_rec)
-
-global_acc$trajet_rec<-
-  
-  global_acc$trajet_rec <- fct_recode(
-    global_acc$trajet,
-    "Pro" = "Domicile – travail",
-    "Pro" = "Utilisation professionnelle",
-    "Non Pro" = "Domicile – école",
-    "Non Pro" = "Courses – achats",
-    "Non Pro" = "Promenade – loisirs",
-    "Non Pro" = "Autre"
-  )
-
-global_acc$secu_rec <-
-  fct_recode(
-    global_acc$utilisation_equipement_secu,
-    "Oui" = "Oui",
-    "Non" = "Non",
-    NULL = "Non déterminable"
-  )
-
-global_acc$lum_rec <- fct_recode(
-  global_acc$lum,
-  "Jour" = "Plein jour",
-  "Nuit" = "Crépuscule ou aube",
-  "Nuit" = "Nuit sans éclairage public",
-  "Nuit" = "Nuit avec éclairage public non allumé",
-  "Nuit" = "Nuit avec éclairage public allumé"
-)
-
-global_acc$atm_rec <- fct_recode(
-  global_acc$atm,
-  "Condition météo normale" = "Normale",
-  "Mauvaise condition météo" = "Pluie légère",
-  "Mauvaise condition météo" = "Pluie forte",
-  "Mauvaise condition météo" = "Neige - grêle",
-  "Mauvaise condition météo" = "Brouillard - fumée",
-  "Mauvaise condition météo" = "Vent fort - tempête",
-  "Mauvaise condition météo" = "Temps éblouissant",
-  "Mauvaise condition météo" = "Temps couvert",
-  "Mauvaise condition météo" = "Autre"
-)
-                                 
-global_acc$catv_rec <- fct_recode(
-  global_acc$catv,
-  "Voiure" = "Voiture",
-  "Voiure" = "Véhicule utilitaire",
-  "Autres vehicule" = "Engin spécial",
-  "Autres vehicule" = "Tracteur",
-  "Autres vehicule" = "Transport en commun",
-  "Autres vehicule" = "Autre véhicule",
-  "Deux roues" = "Vélo",
-  "Deux roues" = "2 roues motorisé"
-)
-
-global_acc$surf_rec <- fct_recode(
-  global_acc$surf,
-  "Surface normale" = "Normale",
-  "Surface glissante" = "Mouillée",
-  "Surface glissante" = "Flaques",
-  "Surface glissante" = "Inondée",
-  "Surface glissante" = "Enneigée",
-  "Surface glissante" = "Boue",
-  "Surface glissante" = "Verglacée",
-  "Surface glissante" = "Corps gras - huile",
-  NULL = "Autre"
-  
-)
-
-#export excel
-
-write_xlsx(global_acc, "data/spss/global_acc.xlsx")
-
-#création dataset pour acm
-
-global_acc_f<-select(global_acc,Num_Acc,grav,groupe_age,sexe,zone,catu,agg,int,col,senc,obs,choc,manv,catr,prof,plan,trajet_rec,secu_rec,lum_rec,atm_rec,catv_rec,surf_rec)
-
-install.packages("gmodels")
-library(gmodels)
-CrossTable(global_acc$grav, global_acc$sexe)
-
-# for (i in 1:ncol(global_acc_f)){
-#   par(ask=T)
-#   plot(global_acc_f[,i])
-# }
-
-###ACM
-# res.mca<-MCA(global_acc_f[,2:ncol(global_acc_f)],quali.sup=2:4,graph=T,na.method="NA")
-res.mca<-MCA(global_acc_f[,2:ncol(global_acc_f)],quali.sup=1,graph=T,na.method="NA")
-
-# barplot(res.mca$eig[,2],names=paste("Dim",1:nrow(res.mca$eig)))
-
-###Représentation de l'inertie
-
-eig.val <- res.mca$eig
-barplot(eig.val[, 2], 
-        names.arg = 1:nrow(eig.val), 
-        main = "Variances Explained by Dimensions (%)",
-        xlab = "Principal Dimensions",
-        ylab = "Percentage of variances",
-        col ="steelblue")
-lines(x = 1:nrow(eig.val), eig.val[, 2], 
-      type = "b", pch = 19, col = "red")
-
-
-###Représentation des individus/modalités
-
-# plot(res.mca,
-#      invisible = c("var", "quali.sup"),
-#      autoLab = "yes")
-# 
-# plot(res.mca,
-#      invisible = c("ind", "quali.sup"),
-#      autoLab = "yes")
-
-#modalités+individus
-x11();plot(res.mca)
-#variables
-plot(res.mca,choix = "var",axes = 1:2)
-#modalités
-plot(res.mca, invisible = c("ind","quali.sup"),autoLab = "no",cex=0.7)
-plot(res.mca, invisible = c("ind"),autoLab = "no",cex=0.7,selectMod = "contrib 20")
-plot(res.mca, invisible = c("ind"),habillage=2,autoLab = "no",cex=0.7,selectMod = "contrib 20",axes = 3:4)
-
-#individus
-plot(res.mca, invisible = c("var","quali.sup"),habillage="grav")
-
-###Tableau d'inertie
-
-summary.MCA(res.mca,ncp=5,nbelements = 20)
-
-dimdesc(res.mca)
-
-
-###Récupération des coordonnées
-coord<-as.data.frame(res.mca$ind$coord[,1:5])
-global_acc_f<-cbind(global_acc_f,coord)
-
-
-
-
-# CrossTable(global_acc$grav, global_acc$agg)
-# 
-# table(global_acc$grav)
-# 
-# table(lieux$int)
-
-
-
-#Test Factoshiny
-
-# library(Factoshiny)
-# 
-# ourtmca<-MCAshiny(global_acc_f[,2:ncol(global_acc_f)])
-
-# 
-# 
-# table(global_acc$atm_rec)
-# table(global_acc$catv)
-# table(vehic2017$catv)
-# table(global_acc$catv_rec)
-# table(global_acc$surf_rec)
-# table(global_acc_f$utilisation_equipement_secu)
-
-# # dplyr
-# caract2017 %>% summarise_all(funs(n_distinct))
-# # en combinant les deux :
-# sapply(caract2017, n_distinct)
