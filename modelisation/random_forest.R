@@ -1,5 +1,14 @@
 # Librairies --------------------------------------------------------------
+install.packages("rlang")
+install.packages("dplyr") # dataset manipulation
+install.packages("tidylog") # provide feedback about dplyr operations
+install.packages("mlr") # interface to classification and regression techniques
+install.packages("parallelMap") # parallelization framework
+install.packages("tidyr") # clean datasets
+install.packages("zoo")
 
+library("ranger")
+library("rlang")
 library("dplyr") # dataset manipulation
 library("tidylog") # provide feedback about dplyr operations
 library("mlr") # interface to classification and regression techniques
@@ -12,6 +21,9 @@ library("zoo") # missing values imputation
 # Load data
 train_data2017 <- read.csv("outputs/individus_2017_alldata.csv")
 test_data2018 <- read.csv("outputs/individus_2018_alldata.csv")
+
+str(train_data2017)
+str(test_data2018)
 
 # Création d'une fonction de cleaning et sélection de variables
 cleaning <- function(dataframe){
@@ -117,6 +129,10 @@ sapply(test_data2018, function(x) sum(is.na(x)))
 summary(train_data2017)
 summary(test_data2018)
 
+train_data2017<-train_data2017 %>%
+  select(-dep)
+test_data2018<-test_data2018 %>%
+  select(-dep)
 
 # Random forest -----------------------------------------------------------
 
@@ -144,6 +160,8 @@ parallelStop()
 # Importance des variables
 imp <- getFeatureImportance(model)
 imp <- t(imp$res)
+
+imp
 
 # Test model --------------------------------------------------------------
 
