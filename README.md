@@ -1,5 +1,5 @@
 <h1 style="font-weight:normal" align="center">
-  &nbsp;BAAC - ENSAE final school project;
+  &nbsp;BAAC - ENSAE final school project
 </h1>
 
 # Summary
