@@ -6,7 +6,10 @@ install.packages("mlr") # interface to classification and regression techniques
 install.packages("parallelMap") # parallelization framework
 install.packages("tidyr") # clean datasets
 install.packages("zoo")
+install.packages("GenSA")
 
+
+library("forcats")
 library("ranger")
 library("rlang")
 library("dplyr") # dataset manipulation
@@ -15,6 +18,10 @@ library("mlr") # interface to classification and regression techniques
 library("parallelMap") # parallelization framework
 library("tidyr") # clean datasets
 library("zoo") # missing values imputation
+library("GenSA")
+
+gc()
+remove(res)
 
 # Data --------------------------------------------------------------------
 
@@ -129,10 +136,27 @@ sapply(test_data2018, function(x) sum(is.na(x)))
 summary(train_data2017)
 summary(test_data2018)
 
+# Suppression de la variable département qui créer de pb pour le RF (limité à 50 levels)
 train_data2017<-train_data2017 %>%
   select(-dep)
 test_data2018<-test_data2018 %>%
   select(-dep)
+
+# Ajout de la modalité "Non communiqué" pour la variable cat_route
+
+
+test_data2018$cat_route <- fct_recode(
+  test_data2018$cat_route,
+  "Autoroute" = "Autoroute",
+  "Autre" = "Autre",
+  "Route Départementale" = "Route Départementale",
+  "Route Nationale" = "Route Nationale",
+  "Voie Communale" = "Voie Communale",
+  "Autre" = "Non communiqué"
+)
+
+#levels(train_data2017$cat_route) <- c(levels(train_data2017$cat_route),"Non communiqué")
+
 
 # Random forest -----------------------------------------------------------
 
@@ -239,5 +263,56 @@ performance(pred.th, measures = list(rf.costs, mmce)) # costs : 1.3074527 / mmce
 calculateConfusionMatrix(pred, relative = FALSE, sums = FALSE, set = "both")
 calculateConfusionMatrix(pred.th, relative = FALSE, sums = FALSE, set = "both")
 
+# Under sampling----------------------------------------------------------
+# underTask <- undersample(trainTask, rate = 0.01)
+# table(underTask$env$data$class)
+# # Learner random forest
+# rf.learner <- makeLearner("classif.ranger",
+#                           predict.type = "prob", 
+#                           importance = c("permutation")
+# )
 
+# Recherche des paramètres ntree et mtry
+param <- makeParamSet(
+  makeIntegerParam("num.trees", lower = 100, upper = 500),
+  makeIntegerParam("mtry", lower = 2, upper = 5)
+)
+
+discrete_ps = makeParamSet(
+  makeDiscreteParam("num.trees", values = c(100,500)),
+  makeDiscreteParam("mtry", values = c(4,10))
+)
+
+# Type de recherche : random
+#ctrl <- makeTuneControlRandom(maxit = 50, tune.threshold = TRUE)
+
+ctrl = makeTuneControlGrid()
+
+# Type de resampling : cross val
+rdesc <- makeResampleDesc("CV", iters = 3) 
+# Tuning
+
+parallelStartSocket(5)
+
+res <- tuneParams(learner = rf.learner,
+                  task = trainTask, 
+                  resampling = rdesc, 
+                  par.set = discrete_ps, 
+                  control = ctrl,  
+                  measure = acc) 
+
+parallelStop()
+
+# Create a new model using tuned hyperparameters
+rf_u_tuned_learner <- setHyperPars(
+  learner = rf.learner,
+  par.vals = res$x
+)
+# Re-train parameters using tuned hyperparameters
+rf_u_model <- train(rf_u_tuned_learner, 
+                    underTask)
+# Make a new prediction
+result <- predict(rf_u_model, testTask)
+performance(result, auc) 
+roc <- roc(valeo_test_V7$class, result$data$prob.yes) 
 

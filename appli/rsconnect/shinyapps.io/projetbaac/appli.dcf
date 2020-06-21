@@ -1,0 +1,10 @@
+name: appli
+title:
+username:
+account: projetbaac
+server: shinyapps.io
+hostUrl: https://api.shinyapps.io/v1
+appId: 2477367
+bundleId: 3298558
+url: https://projetbaac.shinyapps.io/appli/
+when: 1592753521.07092

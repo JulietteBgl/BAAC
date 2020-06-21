@@ -1,0 +1,1 @@
+{"class":"org.apache.spark.ml.feature.RFormula","timestamp":1591272502570,"sparkVersion":"2.3.0","uid":"r_formula_77e04af34049","paramMap":{"featuresCol":"features","formula":"delayed ~ month + day + hours + distance","labelCol":"label","stringIndexerOrderType":"frequencyDesc","forceIndexLabel":false,"handleInvalid":"error"}}

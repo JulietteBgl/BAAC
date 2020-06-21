@@ -1,0 +1,1 @@
+{"class":"org.apache.spark.ml.feature.SQLTransformer","timestamp":1591272501078,"sparkVersion":"2.3.0","uid":"dplyr_transformer_77e0166bba","paramMap":{"statement":"SELECT `dep_delay`, `sched_dep_time`, CONCAT(\"m\", `month`) AS `month`, CONCAT(\"d\", `day`) AS `day`, `distance`\nFROM `__THIS__`\nWHERE (NOT(((`dep_delay`) IS NULL)))"}}

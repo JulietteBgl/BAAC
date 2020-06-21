@@ -1,0 +1,1 @@
+{"class":"org.apache.spark.ml.feature.Bucketizer","timestamp":1591272502152,"sparkVersion":"2.3.0","uid":"bucketizer_77e0c5f322d","paramMap":{"handleInvalid":"error","inputCol":"sched_dep_time","outputCol":"hours","splits":[400.0,800.0,1200.0,1600.0,2000.0,2400.0]}}
