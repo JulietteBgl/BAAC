@@ -1,6 +1,8 @@
 # Librairires -------------------------------------------------------------
 library("dplyr") # dataset manipulation
 library("stringi") # string manipulation
+library("lubridate")
+detach("package:MASS")
 
 # Préparation des données -------------------------------------------------
 
@@ -16,6 +18,8 @@ for (i in c("2017", "2018")) {
   usag <- read.csv(file = paste0("data/",i,"/usagers-", i, ".csv"), header = TRUE, sep = ",")
   # Lieux
   lieux <- read.csv(file = paste0("data/",i,"/lieux-", i, ".csv"), header = TRUE, sep = ",")
+  # alcool
+  alcool <- read.csv(file = "data/alcool_et_accidents.csv", header = TRUE, sep = ";", dec = ",")
   
 # 1. Data recode -------------------------------------------------------------
 
@@ -31,13 +35,18 @@ caract <- caract %>%
 caract <- 
   caract %>% 
   filter(gps == "M",
-         !(dep %in% c(201,202))) %>% # suppression de la Corse
+         !(dep %in% c(201,202, 97))) %>% # suppression de la Corse + DOMTOM
   mutate(dep = stri_pad_left(str = dep, width = 3, pad = 0),
          dep = substr(dep, start = 1, stop = 2))
 
+alcool <- alcool %>% 
+  mutate(dep = stri_pad_left(str = dep, width = 2, pad = 0),
+         dep = substr(dep, start = 1, stop = 2)
+         )
+
 # Transformation des variables quantitatives en facteur
 caract$Num_Acc <- factor(caract$Num_Acc)
-caract$mois <- factor(caract$mois, levels = 1:12, labels = c("Janvier", "Février", "Mars", "Avril", "Mai", "Juin", "Juillet", "Août", "Septembre", "Octobre", "Novembre", "Décembre"))
+#caract$mois <- factor(caract$mois, levels = 1:12, labels = c("Janvier", "Février", "Mars", "Avril", "Mai", "Juin", "Juillet", "Août", "Septembre", "Octobre", "Novembre", "Décembre"))
 caract$lum <- factor(caract$lum, levels = c(1,2,3,4,5), labels = c("Plein jour", "Crépuscule ou aube", "Nuit sans éclairage public", "Nuit avec éclairage public non allumé", "Nuit avec éclairage public allumé"))
 caract$agg <- factor(caract$agg, levels = c(1,2), labels = c("Hors Agglo", "Agglo"))
 caract$int <- factor(caract$int, levels = c(1,2,3,4,5,6,7,8,9), labels = c("Hors intersection","Intersection en X","Intersection en T", "Intersection en Y", "Intersection à plus de 4 branches", "Giratoire", "Place", "Passage à niveau","Autre intersection"))
@@ -79,7 +88,7 @@ usag$equipement_secu <- factor(usag$equipement_secu,
 
 usag$utilisation_equipement_secu <- factor(usag$utilisation_equipement_secu, 
                                            levels = c(1,2,3), 
-                                           labels = c("Utilisation sécu","Non utilisation sécu","Non déterminable"))
+                                           labels = c("Utilisation sécu","Non utilisation sécu","Non communiqué"))
 
 usag$locp <- factor(usag$locp, levels = c(1,2,3,4,5,6,7,8), labels = c("Sur chaussée A + 50 m du passage piéton","Sur chaussée A – 50 m du passage piéton","Sur passage piéton Sans signalisation lumineuse","Sur passage piéton Avec signalisation lumineuse","Sur trottoir","Sur accotement","Sur refuge ou BAU","Sur contre allée"))
 usag$actp <- factor(usag$actp, levels = c(1,2,3,4,5,6,9), labels = c("Se déplaçant Sens véhicule heurtant","Se déplaçant Sens inverse du véhicule","Traversant","Masqué","Jouant – courant","Avec animal","Autre"))
@@ -197,24 +206,71 @@ global_ind <- usag %>%
            no = as.character(catr)
          ),
          loc_pieton = case_when(
-           stri_detect_fixed(locp, "Sur passage") ~ "Sur passage piéton",
-           locp == "Sur chaussée A – 50 m du passage piéton" ~ "Sur passage piéton",
-           locp %in% c("Sur chaussée A + 50 m du passage piéton", "Sur accotement", "Sur refuge ou BAU") ~ "Hors zone piétone",
-           locp %in% c("Sur contre allée", "Sur trottoir") ~ "Zone piétone"
+           stri_detect_fixed(locp, "Sur passage") ~ "Zone piétonne (dont passage piéton)",
+           locp == "Sur chaussée A – 50 m du passage piéton" ~ "Zone piétonne (dont passage piéton)",
+           locp %in% c("Sur chaussée A + 50 m du passage piéton", "Sur accotement", "Sur refuge ou BAU") ~ "Hors zone piétonne",
+           locp %in% c("Sur contre allée", "Sur trottoir") ~ "Zone piétonne (dont passage piéton)"
          ),
          action_pieton = case_when(
            stri_detect_fixed(actp, "Sens") ~ "se deplace",
            actp == "Avec animal" ~ "se deplace",
            actp == "Traversant" ~ "Traversant"
+         ),
+         date = paste0(jour, "/", mois, "/20", an),
+         jour = wday(as.Date(date, format = "%d/%m/%Y"), label = TRUE),
+         place = case_when(
+           place %in% c(1,2,6) ~ "Avant",
+           place %in% c(3:5,7:9) ~ "Arrière"
          )
          
   ) %>% 
-  filter(gps == "Métropole",
-         cat_vehic != "Autre véhicule") %>% 
-  select(#-place, 
-    -locp, -actp, -etatp, -an_nais, -num_veh, -equipement_secu, -senc, -occutc, -obs, -obsm, -manv,
-    -voie, -v1, -v2, -pr, -pr1, -vosp, -lartpc, -larrout, -infra, -situ, -env1, -an, -mois, -jour, -hrmn, -com, 
-    -adr, -gps, -circ, -catv, -atm, -col, -catr) 
+  filter(gps == "Métropole")
+
+# Liste des accidents ayant impliqués des véhicules non pris en compte dans le modèle
+list_acc <- global_ind %>% 
+  filter(cat_vehic == "Autre véhicule") %>% 
+  distinct(Num_Acc)
+
+# Liste des accidents ayant impliqués un poid lourd
+list_pl <- global_ind %>% 
+#  group_by(Num_Acc) %>% 
+  filter(cat_vehic == "Poids lourds") %>% 
+  distinct(Num_Acc)
+
+global_ind <- global_ind %>% 
+  mutate(presence_PL = ifelse(Num_Acc %in% list_pl$Num_Acc & cat_vehic != "Poids lourds", 
+                              "oui", 
+                              "non")) %>% 
+  filter(!Num_Acc %in% list_acc$Num_Acc)
+
+# ajout des taux d'accidents avec alcoolémie par département
+global_ind <- global_ind %>% 
+  left_join(alcool) %>% 
+  select(-dep_name) %>% 
+  filter(!is.na(perc_acc_av_tx_alcool_positif))
+
+# Sélection des variables à garder dans le modèle
+
+global_ind <- global_ind %>% 
+  select(
+    cat_vehic
+    ,catu
+    ,nb_pers_impliquées
+    ,dep
+    ,agg
+    ,collision
+    ,cat_route
+    ,zone
+    ,utilisation_equipement_secu
+    ,age
+    ,loc_pieton
+    ,place
+    ,sexe
+    ,presence_PL
+    ,perc_acc_av_tx_alcool_positif
+    ,perc_acc_mortel_av_tx_alcool_positif
+    ,grav
+  ) 
 
 # write csv
 write.csv(global_ind, paste0("outputs/individus_", i, "_alldata.csv"), row.names = F)
@@ -224,3 +280,6 @@ write.csv(global_ind, paste0("outputs/individus_", i, "_alldata.csv"), row.names
 # check csv
 test2017 <- read.csv("outputs/individus_2017_alldata.csv")
 test2018 <- read.csv("outputs/individus_2018_alldata.csv")
+
+# clean env
+rm(test2017, test2018, alcool, caract, global_ind, lieux, usag, vehic, list_acc, list_pl, i)
