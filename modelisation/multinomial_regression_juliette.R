@@ -30,8 +30,8 @@ library("zoo") # missing values imputation
 # Data --------------------------------------------------------------------
 
 # Load data
-train_data2017 <- read.csv("outputs/individus_2017_alldata.csv")
-test_data2018 <- read.csv("outputs/individus_2018_alldata.csv")
+data2017 <- read.csv("outputs/individus_2017_alldata.csv")
+data2018 <- read.csv("outputs/individus_2018_alldata.csv")
 
 # Création d'une fonction de cleaning et sélection de variables
 cleaning <- function(dataframe){
@@ -47,10 +47,10 @@ cleaning <- function(dataframe){
 }
 
 # Data cleaning sur les dataframe de test et train
-train_data2017 <- cleaning(train_data2017)
-test_data2018 <- cleaning(test_data2018)
+data2017 <- cleaning(data2017)
+data2018 <- cleaning(data2018)
 
-levels(train_data2017$cat_route) <- levels(test_data2018$cat_route)
+levels(data2017$cat_route) <- levels(data2018$cat_route)
 
 # Gestion des valeurs manquantes ------------------------------------------
 
@@ -105,11 +105,11 @@ gestion_na <- function(dataframe) {
 }
 
 # Data cleansing et gestion des NA 
-train_data2017 <- gestion_na(train_data2017)
-test_data2018 <- gestion_na(test_data2018)
+data2017 <- gestion_na(data2017)
+data2018 <- gestion_na(data2018)
 
 # Sur 2018, remplacer "Non communiqué" par "Autre" pour la catégorie du véhicule
-test_data2018 <- test_data2018 %>% 
+data2018 <- data2018 %>% 
   mutate(cat_route = ifelse(
     cat_route == "Non communiqué",
     yes = "Autre",
@@ -117,15 +117,31 @@ test_data2018 <- test_data2018 %>%
   ),
   cat_route = factor(cat_route))
 
+# union all data
+all_data <- union_all(data2017, data2018)
+
 # clean env
-rm(cleaning, gestion_na, Mode)
+rm(cleaning, gestion_na, Mode, data2017, data2018)
+
+# Echantillonnage ---------------------------------------------------------
+
+p <- 0.7
+n <- nrow(all_data)
+all_data <- all_data[sample(n),]
+
+train <- all_data[1:(n*p),]
+test <- all_data[-(1:(n*p)),]
+
+# clean env
+rm(n, p)
 
 # Mise en place -----------------------------------------------------------
 
 # Sélection des variables non colinéaires
 var <- c("grav", "nb_pers_impl", "age", "perc_acc_av_tx_alcool_positif", 
          "perc_acc_mortel_av_tx_alcool_positif", "sexe", "place", "utilisation_equipement_secu", 
-         "agg","cat_vehic", "dep", "catu","collision", "cat_route", "loc_pieton", "presence_PL")
+         "agg","cat_vehic", "dep", "catu","collision", "cat_route", "loc_pieton", "presence_PL",
+         "lum", "atm", "int", "nbv", "mois")
 
 # Learner 
 mr.learner <- makeLearner("classif.multinom",
@@ -137,7 +153,7 @@ getParamSet("classif.multinom")
 # Régression multinomiale - toutes les données ----------------------------
 
 # Tasks 
-trainTask = makeClassifTask(data = train_data2017 %>% select(all_of(var)), target = "grav")
+trainTask = makeClassifTask(data = train %>% select(all_of(var)), target = "grav")
 # testTask = makeClassifTask(data = test_data2018 %>% select(all_of(var)), target = "grav")
 ln <- listLearners(trainTask)
 
@@ -177,8 +193,8 @@ r
 
 # Taux de bien classés par catégorie d'usagers
 bc <- r$pred$data[,c("id", "truth", "response")]
-true <- train_data2017 %>% 
-  mutate(id = seq(1:nrow(train_data2017))) %>% 
+true <- train %>% 
+  mutate(id = seq(1:nrow(train))) %>% 
   select(id, catu)
 bc <- bc %>% 
   left_join(true)
@@ -193,7 +209,7 @@ bc %>%
 
 # Régression multinomiale - conducteurs -----------------------------------
 
-train_cond <- train_data2017 %>% 
+train_cond <- train %>% 
   filter(catu == "Conducteur") %>% 
   select(all_of(var)) %>% 
   select(-catu, -place, -utilisation_equipement_secu, -loc_pieton) 
@@ -221,9 +237,9 @@ r
 # Aggr perf: costs.test.mean=1.0946612,mmce.test.mean=0.3394503
 # Runtime: 32.4218
 
-# Régression muultinomiale - passagers ------------------------------------
+# Régression multinomiale - passagers ------------------------------------
 
-train_pass <- train_data2017 %>% 
+train_pass <- train %>% 
   filter(catu == "Passager") %>% 
   select(all_of(var)) %>% 
   select(-catu, -utilisation_equipement_secu, -loc_pieton)
@@ -253,7 +269,7 @@ r
 
 # Régression multinomiale - piétons ---------------------------------------
 
-train_piet <- train_data2017 %>% 
+train_piet <- train %>% 
   filter(catu == "Piéton") %>% 
   select(all_of(var)) %>% 
   select(-catu, -place)

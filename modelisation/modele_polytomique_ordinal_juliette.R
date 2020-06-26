@@ -17,8 +17,8 @@ select <- dplyr::select # https://medium.com/@HollyEmblem/handling-dplyr-and-mas
 # Data --------------------------------------------------------------------
 
 # Load data
-train_data2017 <- read.csv("outputs/individus_2017_alldata.csv")
-test_data2018 <- read.csv("outputs/individus_2018_alldata.csv")
+data2017 <- read.csv("outputs/individus_2017_alldata.csv")
+data2018 <- read.csv("outputs/individus_2018_alldata.csv")
 
 # Création d'une fonction de cleaning et sélection de variables
 cleaning <- function(dataframe){
@@ -34,10 +34,10 @@ cleaning <- function(dataframe){
 }
 
 # Data cleaning sur les dataframe de test et train
-train_data2017 <- cleaning(train_data2017)
-test_data2018 <- cleaning(test_data2018)
+data2017 <- cleaning(data2017)
+data2018 <- cleaning(data2018)
 
-levels(train_data2017$cat_route) <- levels(test_data2018$cat_route)
+levels(data2017$cat_route) <- levels(data2018$cat_route)
 
 # Gestion des valeurs manquantes ------------------------------------------
 
@@ -92,11 +92,11 @@ gestion_na <- function(dataframe) {
 }
 
 # Data cleansing et gestion des NA 
-train_data2017 <- gestion_na(train_data2017)
-test_data2018 <- gestion_na(test_data2018)
+data2017 <- gestion_na(data2017)
+data2018 <- gestion_na(data2018)
 
 # Sur 2018, remplacer "Non communiqué" par "Autre" pour la catégorie du véhicule
-test_data2018 <- test_data2018 %>% 
+data2018 <- data2018 %>% 
   mutate(cat_route = ifelse(
     cat_route == "Non communiqué",
     yes = "Autre",
@@ -104,12 +104,23 @@ test_data2018 <- test_data2018 %>%
   ),
   cat_route = factor(cat_route))
 
-levels(test_data2018$cat_route)
-levels(train_data2017$cat_route)
+# union all data
+all_data <- union_all(data2017, data2018)
 
 # clean env
-rm(cleaning, gestion_na, Mode)
+rm(cleaning, gestion_na, Mode, data2017, data2018)
 
+# Echantillonnage ---------------------------------------------------------
+
+p <- 0.7
+n <- nrow(all_data)
+all_data <- all_data[sample(n),]
+
+train <- all_data[1:(n*p),]
+test <- all_data[-(1:(n*p)),]
+
+# clean env
+rm(n, p)
 
 # Mise en place -----------------------------------------------------------
 
@@ -117,22 +128,23 @@ rm(cleaning, gestion_na, Mode)
 var <- c("grav", "nb_pers_impl", "age", "perc_acc_av_tx_alcool_positif", "catu",
          "perc_acc_mortel_av_tx_alcool_positif","sexe", #"place", 
          "utilisation_equipement_secu", "agg", "cat_vehic", "collision", "cat_route", 
-         "loc_pieton", "presence_PL")
+         "loc_pieton", "presence_PL",
+         "lum", "atm", "int", "nbv", "mois")
 
-train_data2017 <- train_data2017 %>% 
+train <- train %>% 
   select(all_of(var))
 
 # Ordered logistic regression - toutes les données ------------------------
 
 # Ici nous allons faire une cross validation holdout et non k-fold
-train_data2017 <- train_data2017[sample(nrow(train_data2017)),]
-n <- round(nrow(train_data2017)*0.7)
-train <- train_data2017[1:n,]
-validation <- train_data2017[-(1:n),]
+train <- train[sample(nrow(train)),]
+n <- round(nrow(train)*0.7)
+trainCV <- train[1:n,]
+validation <- train[-(1:n),]
 
 # Train model
 mod_olr <- polr(grav ~ ., 
-            data = train)
+            data = trainCV)
 
 # Validate model
 pred <- predict(object = mod_olr, 
@@ -159,9 +171,32 @@ mat %>%
             n_catu = max(n_catu),
             taux_mal_classés = round(mal_classés/n_catu*100,1))
 
+
+# Calcul du coût
+
+# Utilisation d'une matrice de coûts
+matrice_cout = matrix(c(0, 1, 4,  # true : indemne
+                        3, 0, 3,  # true : Blessé léger
+                        5, 3, 0),  # true : blessé grave
+                      nrow = 3, 
+                      byrow = T)
+
+matrice_confusion <- table(validation$grav, pred)
+matrice_mc_pond <- matrice_confusion * matrice_cout
+sum_mc_coef <- matrice_mc_pond[2,1] + matrice_mc_pond[3,1] +
+  matrice_mc_pond[1,2] + matrice_mc_pond[3,2] +
+  matrice_mc_pond[1,3] + matrice_mc_pond[2,3]
+bien_classes <- matrice_confusion[1,1] + matrice_confusion[2,2] + matrice_confusion[3,3]
+mal_classes <- matrice_confusion[2,1] + matrice_confusion[3,1] +
+  matrice_confusion[1,2] + matrice_confusion[3,2] +
+  matrice_confusion[1,3] + matrice_confusion[2,3]
+# cost cond
+sum_mc_coef / (bien_classes + mal_classes) #1.149657
+
+
 # Ordered logistic regression - conducteurs -------------------------------
 
-train_cond <- train %>% filter(catu == "Conducteur")
+train_cond <- trainCV %>% filter(catu == "Conducteur")
 validation_cond <- validation %>% filter(catu == "Conducteur")
 
 mod_olr_cond <- polr(grav ~ ., 
@@ -206,11 +241,17 @@ sum_mc_coef_cond / (bien_classes_cond + mal_classes_cond) #1.149657
 
 # Ordered logistic regression - passagers ---------------------------------
 
-train_pass <- train %>% filter(catu == "Passager")
+train_pass <- trainCV %>% filter(catu == "Passager")
 validation_pass <- validation %>% filter(catu == "Passager")
 
+# "lum", "atm", "int", "nbv", "mois"
+
 mod_olr_pass <- polr(grav ~ ., 
-                     data = train_pass %>% select(-loc_pieton, -catu, -utilisation_equipement_secu
+                     data = train_pass %>% 
+                       select(-loc_pieton, 
+                              -catu, 
+                              -utilisation_equipement_secu, 
+                              -int
                      ))
 pred_pass <- predict(object = mod_olr_pass, 
                      newdata = validation_pass %>% select(-loc_pieton, -catu, -utilisation_equipement_secu
@@ -243,11 +284,15 @@ sum_mc_coef_pass / (bien_classes_pass + mal_classes_pass) #1.327978
 
 # Ordered logistic regression - piétons -----------------------------------
 
-train_piet <- train %>% filter(catu == "Piéton") 
+train_piet <- trainCV %>% filter(catu == "Piéton") 
 validation_piet <- validation %>% filter(catu == "Piéton") 
 
 mod_olr_piet <- polr(grav ~ ., 
-                     data = train_piet %>% select(-catu, - presence_PL))
+                     data = train_piet %>% 
+                       select(-catu, 
+                              -presence_PL, 
+                              -int,
+                              -atm))
 
 pred_piet <- predict(object = mod_olr_piet, 
                      newdata = validation_piet %>% select(-catu, - presence_PL))

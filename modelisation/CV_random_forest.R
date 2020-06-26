@@ -11,8 +11,8 @@ detach("package:MASS", unload=TRUE)
 # Data --------------------------------------------------------------------
 
 # Load data
-train_data2017 <- read.csv("outputs/individus_2017_alldata.csv")
-test_data2018 <- read.csv("outputs/individus_2018_alldata.csv")
+data2017 <- read.csv("outputs/individus_2017_alldata.csv")
+data2018 <- read.csv("outputs/individus_2018_alldata.csv")
 
 # Création d'une fonction de cleaning et sélection de variables
 cleaning <- function(dataframe){
@@ -28,8 +28,8 @@ cleaning <- function(dataframe){
 }
 
 # Data cleaning sur les dataframe de test et train
-train_data2017 <- cleaning(train_data2017)
-test_data2018 <- cleaning(test_data2018)
+data2017 <- cleaning(data2017)
+data2018 <- cleaning(data2018)
 
 # Gestion des valeurs manquantes ------------------------------------------
 
@@ -84,11 +84,23 @@ gestion_na <- function(dataframe) {
 }
 
 # Data cleansing et gestion des NA 
-train_data2017 <- gestion_na(train_data2017)
-test_data2018 <- gestion_na(test_data2018)
+data2017 <- gestion_na(data2017)
+data2018 <- gestion_na(data2018)
+
+# union all data
+all_data <- union_all(data2017, data2018)
 
 # clean env
-rm(cleaning, gestion_na, Mode)
+rm(cleaning, gestion_na, Mode, data2017, data2018)
+
+# Echantillonnage ---------------------------------------------------------
+
+p <- 0.7
+n <- nrow(all_data)
+all_data <- all_data[sample(n),]
+
+train <- all_data[1:(n*p),]
+test <- all_data[-(1:(n*p)),]
 
 # Mise en place -----------------------------------------------------------
 
@@ -102,12 +114,22 @@ rf.learner <- makeLearner("classif.ranger",
 # Random forest - toutes les données --------------------------------------
 
 # Task 
-trainTask = makeClassifTask(data = train_data2017, target = "grav")
+trainTask = makeClassifTask(data = train, target = "grav")
 ln <- listLearners(trainTask)
 
-# cross validation - resample instance
-# r_ins = makeResampleInstance("Holdout", split = 2/3, task = trainTask)
-r_ins = makeResampleInstance("CV", iters = 5, task = trainTask)
+# cross validation - mmce
+parallelStartSocket(5)
+rdesc = makeResampleDesc("CV", iters = 5)
+r <- resample(learner = rf.learner,
+              task = trainTask, 
+              resampling = rdesc, 
+              measures = mmce) 
+parallelStop()
+r # mmce.test.mean=0.3274708
+
+# Matrice de confusion
+calculateConfusionMatrix(r$pred, relative = FALSE, sums = FALSE, set = "both")
+
 
 # Utilisation d'une matrice de coûts
 
@@ -128,33 +150,27 @@ colnames(costs) = rownames(costs) = getTaskClassLevels(trainTask)
 
 # Création de la mesure du coût
 rf.costs = makeCostMeasure(costs = costs,
-                           best = 0, worst = 5)
+                           best = NULL, worst = NULL)
 
-# Train model
+# Re train model with another measure for the loss function
 parallelStartSocket(5)
-
-r = resample(learner = rf.learner, 
-             task = trainTask, 
-             resampling = r_ins, 
-             measures = list(rf.costs, mmce), 
-             show.info = FALSE)
-
+r_c = resample(learner = rf.learner, 
+               task = trainTask, 
+               resampling = rdesc, 
+               measures = rf.costs, 
+               show.info = FALSE)
 parallelStop()
-r
-
-# Resample Result
-# Task: train_data2017
-# Learner: classif.ranger
-# Aggr perf: costs.test.mean=1.0401762,mmce.test.mean=0.3316706
-# Runtime: 650.429
+r_c # costs.test.mean=0.9919682
 
 # Matrice de confusion
-calculateConfusionMatrix(r$pred, relative = FALSE, sums = FALSE, set = "both")
+calculateConfusionMatrix(r_c$pred, relative = FALSE, sums = FALSE, set = "both")
 
-# Taux de bien classés par catégorie d'usagers
+# Analyses du modèle
+
+# Taux de mal classés par catégorie d'usagers
 bc <- r$pred$data[,c("id", "truth", "response")]
-true <- train_data2017 %>% 
-  mutate(id = seq(1:nrow(train_data2017))) %>% 
+true <- train %>% 
+  mutate(id = seq(1:nrow(train))) %>% 
   select(id, catu)
 bc <- bc %>% 
   left_join(true)
@@ -170,7 +186,7 @@ bc %>%
 # Random forest - conducteurs ---------------------------------------------
 
 # Task
-cond_train <- train_data2017 %>% 
+cond_train <- train %>% 
   filter(catu == 'Conducteur') %>% 
   select(-catu, -place, -loc_pieton)
 
@@ -178,7 +194,7 @@ trainTask_cond = makeClassifTask(data = cond_train,
                                  target = "grav")
 
 # cross validation - resample instance
-r_ins = makeResampleInstance("CV", iters = 5, task = trainTask_cond)
+r_ins = makeResampleInstance("CV", iters = 5, task = trainTask_cond) # je n'ai pas trouvé de différence claire entre makeResampleDesc et makeResampleInstance
 
 # Train model
 parallelStartSocket(5)
@@ -195,8 +211,8 @@ r
 # Resample Result
 # Task: cond_train
 # Learner: classif.ranger
-# Aggr perf: costs.test.mean=1.0057687,mmce.test.mean=0.3120786
-# Runtime: 144.379
+# Aggr perf: costs.test.mean=0.9624094,mmce.test.mean=0.3106232
+# Runtime: 425.38
 
 # Matrice de confusion
 calculateConfusionMatrix(r$pred, relative = FALSE, sums = FALSE, set = "both")
@@ -204,7 +220,7 @@ calculateConfusionMatrix(r$pred, relative = FALSE, sums = FALSE, set = "both")
 
 # Random forest - passagers -----------------------------------------------
 
-pass_train <- train_data2017 %>% 
+pass_train <- train %>% 
   filter(catu == 'Passager') %>% 
   select(-catu, -loc_pieton)
 
@@ -217,7 +233,7 @@ r_ins = makeResampleInstance("CV", iters = 5, task = trainTask_pass)
 # Train model
 parallelStartSocket(5)
 
-r = resample(learner = rf.learner, 
+r <- resample(learner = rf.learner, 
              task = trainTask_pass, 
              resampling = r_ins, 
              measures = list(rf.costs, mmce), 
@@ -229,15 +245,15 @@ r
 # Resample Result
 # Task: pass_train
 # Learner: classif.ranger
-# Aggr perf: costs.test.mean=1.2558596,mmce.test.mean=0.4308209
-# Runtime: 24.7856
+# Aggr perf: costs.test.mean=1.1628328,mmce.test.mean=0.4269154
+# Runtime: 62.035
 
 # Matrice de confusion
 calculateConfusionMatrix(r$pred, relative = FALSE, sums = FALSE, set = "both")
 
 # Random forest - piétons -------------------------------------------------
 
-piet_train <- train_data2017 %>% 
+piet_train <- train %>% 
   filter(catu == 'Piéton') %>% 
   select(-catu, -place, -presence_PL)
 
@@ -250,7 +266,7 @@ r_ins = makeResampleInstance("CV", iters = 5, task = trainTask_piet)
 # Train model
 parallelStartSocket(5)
 
-r = resample(learner = rf.learner, 
+r <- resample(learner = rf.learner, 
              task = trainTask_piet, 
              resampling = r_ins, 
              measures = list(rf.costs, mmce), 
@@ -262,8 +278,8 @@ r
 # Resample Result
 # Task: piet_train
 # Learner: classif.ranger
-# Aggr perf: costs.test.mean=0.9550632,mmce.test.mean=0.3225654
-# Runtime: 7.4717
+# Aggr perf: costs.test.mean=0.9119942,mmce.test.mean=0.3109005
+# Runtime: 20.3652
 
 # Matrice de confusion
 calculateConfusionMatrix(r$pred, relative = FALSE, sums = FALSE, set = "both")
@@ -271,22 +287,28 @@ calculateConfusionMatrix(r$pred, relative = FALSE, sums = FALSE, set = "both")
 # Erreur de généralisation ------------------------------------------------
 
 # Après avoir choisi les modèles à utiliser en cross validation de type k-fold, on peut tester
-# le modèle sélectionné sur des données qui n'ont pas encore été vues : les données de 2018.
+# le modèle sélectionné sur des données qui n'ont pas encore été vues.
 
-# Etape 1 : entrainer le modèle sélectionné sur les données 2017
+# Sélection des variables importantes
+train <- train %>% 
+  select(-nbv, -lum, -atm, -mois, -int)
+test <- test %>% 
+  select(-nbv, -lum, -atm, -mois, -int)
+
+# Etape 1 : entrainer le modèle sélectionné sur les données train
 rf.learner <- makeLearner("classif.ranger",
                           predict.type = "prob", 
                           importance = c("permutation"))
 
-trainTask = makeClassifTask(data = train_data2017, target = "grav")
+trainTask <-makeClassifTask(data = train, target = "grav")
 
 parallelStartSocket(5)
 modele <- train(rf.learner, trainTask)
 parallelStop()
 
-# Etape 2 : utiliser le modèle sur les données 2018
+# Etape 2 : utiliser le modèle sur les données test
 pred <- predict(modele, 
-                newdata = test_data2018)
+                newdata = test)
 
 # Etape 3 : Evaluer le modèle
 
@@ -300,19 +322,19 @@ costs = matrix(c(0, 1, 4,  # true : indemne
 colnames(costs) = rownames(costs) = getTaskClassLevels(trainTask)
 
 rf.costs = makeCostMeasure(costs = costs,
-                           best = 0, worst = 5)
+                           best = NULL, worst = NULL)
 
 # Performances de la prédiction
 performance(pred, measures = list(rf.costs, mmce))
 #    costs        mmce 
-# 1.0373006     0.3437242 
+# 0.9888516     0.3269172
 
 # Note : il est possible de jouer sur le seuil ici :
 # pred_th <- setThreshold(pred, c(Indemne = 0.1, `Blessé léger` = 0.2, `Blessé grave` = 0.3))
 # performance(pred_th, measures = list(rf.costs, mmce))
 
 # Confusion matrix
-calculateConfusionMatrix(pred, relative = FALSE, sums = FALSE, set = "both")
+calculateConfusionMatrix(pred, relative = TRUE, sums = FALSE, set = "both")
 
 # Analyse du modèle -------------------------------------------------------
 
@@ -321,7 +343,7 @@ imp <- getFeatureImportance(modele)
 imp <- t(imp$res)
 
 # Taux de bien classés par catégorie d'usagers
-bc <- data.frame(test_data2018 %>% select(catu, grav), 
+bc <- data.frame(test %>% select(catu, grav), 
                  pred$data[,c("truth", "response")])
 
 bc %>% 
@@ -332,6 +354,15 @@ bc %>%
             n_catu = max(n_catu),
             taux_mal_classés = round(mal_classés/n_catu*100,1))
 
+
+
+
+
+
+
+
+
+
 # Erreur de généralisation par catégorie usager ---------------------------
 
 # Learner 
@@ -340,17 +371,17 @@ rf.learner <- makeLearner("classif.ranger",
                           importance = c("permutation"))
 
 # Train tasks
-cond_train <- train_data2017 %>% 
+cond_train <- train %>% 
   filter(catu == 'Conducteur') %>% 
   select(-catu, -place, -loc_pieton)
 trainTask_cond <- makeClassifTask(data = cond_train, target = "grav")
 
-pass_train <- train_data2017 %>% 
+pass_train <- train %>% 
   filter(catu == 'Passager') %>% 
   select(-catu, -loc_pieton)
 trainTask_pass <- makeClassifTask(data = pass_train, target = "grav")
 
-piet_train <- train_data2017 %>% 
+piet_train <- train %>% 
   filter(catu == 'Piéton') %>% 
   select(-catu, - place, - presence_PL)
 trainTask_piet <- makeClassifTask(data = piet_train, 
@@ -366,7 +397,7 @@ parallelStop()
 # Analyse des modèles -----------------------------------------------------
 
 # Conducteurs
-cond_test <- test_data2018 %>% 
+cond_test <- test %>% 
   filter(catu == 'Conducteur') %>% 
   select(-catu, -place, -loc_pieton)
 
@@ -380,7 +411,7 @@ imp_cond <- getFeatureImportance(model_cond)
 imp_cond <- t(imp_cond$res)
 
 # Passagers
-pass_test <- test_data2018 %>% 
+pass_test <- test %>% 
   filter(catu == 'Passager') %>% 
   select(-catu, -loc_pieton)
 
@@ -394,7 +425,7 @@ imp_pass <- getFeatureImportance(model_pass)
 imp_pass <- t(imp_pass$res)
 
 # Piétons
-piet_test <- test_data2018 %>% 
+piet_test <- test %>% 
   filter(catu == 'Piéton') %>% 
   select(-catu, -place)
 
@@ -410,7 +441,7 @@ imp_piet <- t(imp_piet$res)
 # Passage en production ---------------------------------------------------
 
 # Entrainement des modèles sur 2017 + 2018
-all_data <- union_all(train_data2017, test_data2018)
+all_data <- union_all(train, test)
 all_data_cond <- all_data %>% filter(catu == "Conducteur") %>% select(-catu, -place, -loc_pieton)
 all_data_pass <- all_data %>% filter(catu == "Passager") %>% select(-catu, -loc_pieton)
 all_data_piet <- all_data %>% filter(catu == "Piéton") %>% select(-catu, -place)
