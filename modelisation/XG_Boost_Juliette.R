@@ -10,8 +10,8 @@ library("zoo") # missing values imputation
 # Data --------------------------------------------------------------------
 
 # Load data
-train_data2017 <- read.csv("outputs/individus_2017_alldata.csv")
-test_data2018 <- read.csv("outputs/individus_2018_alldata.csv")
+data2017 <- read.csv("outputs/individus_2017_alldata.csv")
+data2018 <- read.csv("outputs/individus_2018_alldata.csv")
 
 # Création d'une fonction de cleaning et sélection de variables
 cleaning <- function(dataframe){
@@ -27,8 +27,8 @@ cleaning <- function(dataframe){
 }
 
 # Data cleaning sur les dataframe de test et train
-train_data2017 <- cleaning(train_data2017)
-test_data2018 <- cleaning(test_data2018)
+data2017 <- cleaning(data2017)
+data2018 <- cleaning(data2018)
 
 # Gestion des valeurs manquantes ------------------------------------------
 
@@ -83,11 +83,11 @@ gestion_na <- function(dataframe) {
 }
 
 # Data cleansing et gestion des NA 
-train_data2017 <- gestion_na(train_data2017)
-test_data2018 <- gestion_na(test_data2018)
+data2017 <- gestion_na(data2017)
+data2018 <- gestion_na(data2018)
 
 # Sur 2018, remplacer "Non communiqué" par "Autre" pour la catégorie du véhicule
-test_data2018 <- test_data2018 %>% 
+data2018 <- data2018 %>% 
   mutate(cat_route = ifelse(
     cat_route == "Non communiqué",
     yes = "Autre",
@@ -95,8 +95,21 @@ test_data2018 <- test_data2018 %>%
   ),
   cat_route = factor(cat_route))
 
+# union all data
+all_data <- union_all(data2017, data2018)
+
 # clean env
 rm(cleaning, gestion_na, Mode)
+
+# Echantillonnage ---------------------------------------------------------
+
+p <- 0.7
+n <- nrow(all_data)
+
+all_data <- all_data[sample(n),]
+
+train_i <- all_data[1:(n*p),]
+test <- all_data[-(1:(n*p)),]
 
 # One hot encoding --------------------------------------------------------
 
@@ -118,21 +131,24 @@ vars <- c("place", "catu", "sexe",
           "cat_vehic", 
           "collision", "cat_route", "loc_pieton", 
           "presence_PL", 
-          "dep"
+          "dep",
+          "lum",
+          "atm",
+          "int"
           )
 
-train <- createDummyFeatures(train_data2017, 
+train <- createDummyFeatures(train_i, 
                              cols = vars)
 train <- colClean(train)
 train$grav <- factor(as.numeric(train$grav) - 1)
 
-test <- createDummyFeatures(test_data2018, 
+test <- createDummyFeatures(test, 
                             cols = vars)
 test <- colClean(test)
 test$grav <- factor(as.numeric(test$grav) - 1)
 
 # clean env
-rm(vars, colClean)
+rm(vars, colClean, data2017, data2018)
 
 # Mise en place -----------------------------------------------------------
 
@@ -154,6 +170,17 @@ ln <- listLearners(trainTask)
 # cross validation - resample instance
 r_ins = makeResampleInstance("CV", iters = 5, task = trainTask)
 
+# Train model
+parallelStartSocket(5)
+r = resample(learner = xgboost.learner, 
+             task = trainTask, 
+             resampling = r_ins, 
+             measures = list(mmce), 
+             show.info = FALSE)
+parallelStop()
+r # mmce.test.mean=0.3578283
+
+
 # Utilisation d'une matrice de coûts
 costs = matrix(c(0, 1, 4,  # true : indemne
                  3, 0, 3,  # true : Blessé léger
@@ -165,7 +192,7 @@ colnames(costs) = rownames(costs) = getTaskClassLevels(trainTask)
 
 # Création de la mesure du coût
 xgb.costs = makeCostMeasure(costs = costs,
-                           best = 0, worst = 5)
+                           best = NULL, worst = NULL)
 
 # Train model
 parallelStartSocket(5)
@@ -173,22 +200,16 @@ parallelStartSocket(5)
 r = resample(learner = xgboost.learner, 
              task = trainTask, 
              resampling = r_ins, 
-             measures = list(xgb.costs, mmce), 
+             measures = list(xgb.costs), 
              show.info = FALSE)
 
 parallelStop()
-r
-
-# Resample Result
-# Task: train
-# Learner: classif.xgboost
-# Aggr perf: costs.test.mean=1.1154889,mmce.test.mean=0.3576429
-# Runtime: 9.37596
+r # costs.test.mean=1.0827682
 
 # Taux de bien classés par catégorie d'usagers
 bc <- r$pred$data[,c("id", "truth", "response")]
-true <- train_data2017 %>% 
-  mutate(id = seq(1:nrow(train_data2017))) %>% 
+true <- train_i %>% 
+  mutate(id = seq(1:nrow(train_i))) %>% 
   select(id, catu)
 bc <- bc %>% 
   left_join(true)

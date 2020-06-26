@@ -270,6 +270,12 @@ global_ind <- global_ind %>%
     ,perc_acc_av_tx_alcool_positif
     ,perc_acc_mortel_av_tx_alcool_positif
     ,grav
+    
+    ,lum
+    ,atm
+    ,int
+    ,nbv
+    ,mois
   ) 
 
 # write csv
@@ -283,3 +289,7 @@ test2018 <- read.csv("outputs/individus_2018_alldata.csv")
 
 # clean env
 rm(test2017, test2018, alcool, caract, global_ind, lieux, usag, vehic, list_acc, list_pl, i)
+  
+  
+  
+  
